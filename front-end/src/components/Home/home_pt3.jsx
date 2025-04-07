@@ -1,10 +1,10 @@
 import React from "react";
 import { Plus } from "lucide-react";
-import product1 from "../assets/default/homeproduct1.png";
-import product4 from "../assets/default/homeproduct4.png";
-import product5 from "../assets/default/homeproduct5.jpeg";
-import product6 from "../assets/default/homeproduct6.jpeg";
-import product7 from "../assets/default/homeproduct7.png";
+import product1 from "../../assets/default/homeproduct1.png";
+import product4 from "../../assets/default/homeproduct4.png";
+import product5 from "../../assets/default/homeproduct5.jpeg";
+import product6 from "../../assets/default/homeproduct6.jpeg";
+import product7 from "../../assets/default/homeproduct7.png";
 
 
 const HomePart3 = () => {

@@ -1,29 +1,39 @@
 import React from "react";
-import product1 from "../assets/default/homeproduct1.png";
-import product2 from "../assets/default/homeproduct2.png";
-import product3 from "../assets/default/homeproduct3.png";
+import { useNavigate } from "react-router-dom";
+import product1 from "../../assets/default/homeproduct1.png";
+import product2 from "../../assets/default/homeproduct2.png";
+import product3 from "../../assets/default/homeproduct3.png";
 
 const HomePart1 = () => {
+  const navigate = useNavigate();
+  
   const productData = [
     {
+      id: 1,
       image: product1,
       alt: "New Arrival",
       title: "NEW ARRIVAL",
       hoverText: "Explore"
     },
     {
+      id: 2,
       image: product2,
       alt: "Valentine Special",
       title: "VALENTINE SPECIAL",
       hoverText: "Explore"
     },
     {
+      id: 3,
       image: product3,
       alt: "Jewel Sets",
       title: "JEWEL SETS",
       hoverText: "Explore"
     }
   ];
+
+  const handleProductClick = (productId) => {
+    navigate(`/products/${productId}`);
+  };
 
   return (
     <div className="bg-[#F9F5EE] p-10">
@@ -35,7 +45,11 @@ const HomePart1 = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-15 px-[0rem] md:px-[10rem]">
         {productData.map((product, index) => (
-          <div key={index} className="relative">
+          <div 
+            key={index} 
+            className="relative cursor-pointer"
+            onClick={() => handleProductClick(product.id)}
+          >
             {/* Mobile: Title overlayed on image */}
             <div className="md:hidden relative rounded-xl aspect-[2/1]">
               <div 

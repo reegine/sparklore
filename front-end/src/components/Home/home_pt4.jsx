@@ -1,5 +1,5 @@
 import React from "react";
-import sparkle from "../assets/default/home_sparkle.png";
+import sparkle from "../../assets/default/home_sparkle.png";
 
 const Features = () => {
   const features = [

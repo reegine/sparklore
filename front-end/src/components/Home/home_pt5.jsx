@@ -1,10 +1,10 @@
 import React, { useRef } from "react";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
-import vid1 from "../assets/video/vid1.mp4";
-import vid2 from "../assets/video/vid2.mp4";
-import vid3 from "../assets/video/vid3.mp4";
-import vid4 from "../assets/video/vid4.mp4";
-import vid5 from "../assets/video/vid1.mp4";
+import vid1 from "../../assets/video/vid1.mp4";
+import vid2 from "../../assets/video/vid2.mp4";
+import vid3 from "../../assets/video/vid3.mp4";
+import vid4 from "../../assets/video/vid4.mp4";
+import vid5 from "../../assets/video/vid1.mp4";
 
 const VideoCarousel = () => {
   const scrollRef = useRef(null);

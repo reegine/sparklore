@@ -1,9 +1,9 @@
 import React from "react";
-import people1 from "../assets/default/people1.jpeg";
-import people2 from "../assets/default/people2.jpeg";
-import people3 from "../assets/default/people3.jpeg";
-import product1 from "../assets/default/homeproduct1.png";
-import product2 from "../assets/default/homeproduct2.png";
+import people1 from "../../assets/default/people1.jpeg";
+import people2 from "../../assets/default/people2.jpeg";
+import people3 from "../../assets/default/people3.jpeg";
+import product1 from "../../assets/default/homeproduct1.png";
+import product2 from "../../assets/default/homeproduct2.png";
 
 const reviews = [
   {

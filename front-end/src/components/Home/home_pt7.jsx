@@ -1,12 +1,12 @@
 import React from "react";
 
 // Import your images
-import img1 from "../assets/default/homeproduct1.png";
-import img2 from "../assets/default/homeproduct2.png";
-import img3 from "../assets/default/homeproduct3.png";
-import img4 from "../assets/default/homeproduct4.png";
-import img5 from "../assets/default/homeproduct5.jpeg";
-import img6 from "../assets/default/homeproduct6.jpeg";
+import img1 from "../../assets/default/homeproduct1.png";
+import img2 from "../../assets/default/homeproduct2.png";
+import img3 from "../../assets/default/homeproduct3.png";
+import img4 from "../../assets/default/homeproduct4.png";
+import img5 from "../../assets/default/homeproduct5.jpeg";
+import img6 from "../../assets/default/homeproduct6.jpeg";
 
 const images = [img1, img2, img3, img4, img5, img6];
 

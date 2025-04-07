@@ -1,4 +1,4 @@
-import banner from "../assets/default/banner_home.jpeg";
+import banner from "../../assets/default/navbar_giftsets_bg.jpg";
 
 const BannerHome = () => {
   return (
@@ -15,13 +15,12 @@ const BannerHome = () => {
         </div>
 
         {/* Text Content - Centered */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4 text-white">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-wider">
-            Jewellery That Tells Your Story
+        <div className="relative z-10 h-full flex flex-col items-start justify-center text-center px-4 text-white ps-[7rem]">
+          <h1 className="text-2xl md:text-5xl mb-4 tracking-wider">
+          Meaningful Gifts, Beautifully Wrapped
           </h1>
-          <p className="text-lg md:text-xl max-w-2xl leading-relaxed">
-            Create, customize, and cherish—crafted just for you. SparkLore
-            brings your unique style to life, one charm at a time.
+          <p className="text-lg md:text-3xl max-w-2xl leading-relaxed">
+          Celebrate special moments with curated jewelry sets—thoughtful, timeless, and made to be cherished.
           </p>
 
           {/* <button className="mt-8 px-8 py-3 bg-[#b87777] hover:bg-[#9a5f5f] text-white font-medium rounded-full transition-colors duration-300">

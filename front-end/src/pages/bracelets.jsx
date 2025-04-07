@@ -1,5 +1,14 @@
-const Bracelets = () => {
-    return <div className="text-center p-6 text-lg">Browse our Bracelets!</div>;
-  };
-  
-  export default Bracelets;
+import Footer from '../components/footer.jsx'
+import NavBar_Bracelet from '../components/Bracelet/navbar_bracelet.jsx'
+import ProductGrid from '../components/Bracelet/product_filter.jsx'
+
+
+export default function Bracelets() {
+    return (
+      <>
+          <NavBar_Bracelet/>
+          <ProductGrid/>
+          <Footer />
+      </>
+    )
+  }

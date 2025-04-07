@@ -1,10 +1,11 @@
 import { Link, NavLink } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu } from "lucide-react";
-import logo from "../assets/logo/sparklore_logo.png";
-import { useState } from "react";
+import logo from "../../assets/logo/sparklore_logo.png";
+import { useState,useEffect } from "react";
 
-const NavBar = () => {
+const NavBar_GiftSets = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const navItems = [
     { name: "Charm Bar", path: "/charmbar" },
@@ -16,11 +17,16 @@ const NavBar = () => {
     { name: "Gift Sets", path: "/giftsets" },
   ];
 
+  useEffect(() => {
+    // Set isInitialLoad to false after the component mounts
+    setIsInitialLoad(false);
+  }, []);
+
   return (
     <div className="bg-[#fdfaf3] shadow-md">
       {/* Desktop Layout (unchanged from your original) */}
       <div className="hidden md:block">
-        <nav className="px-8 pb-[2rem] pt-[1rem] flex items-center justify-between">
+        <nav className="px-[9rem] pb-[2rem] pt-[1rem] flex items-center justify-between">
           {/* Left Section - Language Toggle */}
           <div className="flex items-center">
             <button className="flex items-center border rounded-full text-xs font-medium">
@@ -46,14 +52,14 @@ const NavBar = () => {
 
         {/* Bottom Navigation Links */}
         <div className="px-6 pb-[1rem] pt-[0.1rem]">
-          <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
+            <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
             {navItems.map((item, index) => (
               <li key={index}>
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
                     `pb-2 hover:text-[#b87777] hover:border-b hover:border-[#b87777] transition-colors duration-300 ${
-                      isActive ? "text-[#b87777] font-bold border-b-2 border-[#b87777]" : "text-gray-800"
+                      isInitialLoad || !isActive ? "text-gray-800" : "text-[#b87777] font-bold border-b-2 border-[#b87777]"
                     }`
                   }
                 >
@@ -141,4 +147,4 @@ const NavBar = () => {
   );
 };
 
-export default NavBar;
+export default NavBar_GiftSets;
