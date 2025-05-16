@@ -1,12 +1,36 @@
 import { Link, NavLink } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import banner from "../../assets/default/navbar_charmbar_bg.png";
-
+import product1 from "../../assets/default/homeproduct1.png";
+import product2 from "../../assets/default/homeproduct2.png";
 
 const NavBar_Charmbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCartOpen, setDrawerCartOpen] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [cartItems, setCartItems] = useState([
+    {
+      id: 1,
+      name: "Charm Link Custom Bracelet",
+      price: 369998,
+      quantity: 1,
+      selected: false,
+      image: product1,
+      charms: [product1, product1, product1, product1, product1],
+      message: "This is for the special message if the user want to send a message to the recipient."
+    },
+    {
+      id: 2,
+      name: "Marbella Ring",
+      price: 99999,
+      quantity: 1,
+      selected: false,
+      image: product2
+    }
+  ]);
 
   const navItems = [
     { name: "Charm Bar", path: "/charmbar" },
@@ -18,154 +42,383 @@ const NavBar_Charmbar = () => {
     { name: "Gift Sets", path: "/giftsets" },
   ];
 
+  useEffect(() => {
+    setIsInitialLoad(false);
+  }, []);
+
+  // Handle quantity change
+  const handleQuantityChange = (id, change) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: Math.max(1, item.quantity + change)
+            }
+          : item
+      )
+    );
+  };
+
+  // Toggle item selection
+  const toggleItemSelection = (id) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              selected: !item.selected
+            }
+          : item
+      )
+    );
+  };
+
+  // Toggle select all
+  const toggleSelectAll = () => {
+    const allSelected = cartItems.every(item => item.selected);
+    setCartItems(prevItems =>
+      prevItems.map(item => ({
+        ...item,
+        selected: !allSelected
+      }))
+    );
+  };
+
+  // Calculate total price
+  const calculateTotal = () => {
+    return cartItems
+      .filter(item => item.selected)
+      .reduce((total, item) => total + item.price * item.quantity, 0);
+  };
+
+  // Format price to Indonesian Rupiah
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price).replace('IDR', 'Rp.');
+  };
+
   return (
-    <div className="shadow-md ">
-        <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
-                {/* Background Image - Using your imported image */}
-                <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${banner})` }}
-                >
-                <div className="absolute inset-0 bg-black/30"></div>{" "}
-                {/* Overlay for better text visibility */}
-                </div>
+    <div className="shadow-md">
+      <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${banner})` }}
+        >
+          <div className="absolute inset-0 bg-black/30"></div>
+        </div>
 
-                {/* Text Content - Centered */}
-                <div className="relative flex flex-col md:items-center md:justify-center md:text-center text-white">
+        {/* Text Content - Centered */}
+        <div className="relative flex flex-col md:items-center md:justify-center md:text-center text-white">
+          {/* Desktop Layout */}
+          <div className="hidden md:block hover:bg-[#fdfaf3] w-full md:px-[7rem]">
+            <nav className="px-8 pb-[2rem] pt-[1rem] flex items-center justify-between">
+              {/* Left Section - Language Toggle */}
+              <div className="flex items-center">
+                <button className="flex items-center border rounded-full text-xs font-medium">
+                  <span className="px-3 py-1 bg-white rounded-l-full text-[#302E2A]">EN</span>
+                  <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full">ID</span>
+                </button>
+              </div>
 
-                    {/* Desktop Layout (unchanged from your original) */}
-                    <div className="hidden md:block hover:bg-[#fdfaf3] w-full md:px-[7rem]" >
-                        <nav className="px-8 pb-[2rem] pt-[1rem] flex items-center justify-between">
-                        {/* Left Section - Language Toggle */}
-                        <div className="flex items-center">
-                            <button className="flex items-center border rounded-full text-xs font-medium">
-                            <span className="px-3 py-1 bg-white rounded-l-full text-[#302E2A]">EN</span>
-                            <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full">ID</span>
-                            </button>
-                        </div>
+              {/* Center Section - Logo */}
+              <div className="flex-1 flex justify-center">
+                <Link to="/">
+                  <img src={logo} alt="Sparklore Logo" className="h-[7rem] object-contain" />
+                </Link>
+              </div>
 
-                        {/* Center Section - Logo */}
-                        <div className="flex-1 flex justify-center">
-                            <Link to="/">
-                            <img src={logo} alt="Sparklore Logo" className="h-[7rem] object-contain" />
-                            </Link>
-                        </div>
+              {/* Right Section - Icons */}
+              <div className="flex items-center gap-6 text-gray-700">
+                <Search 
+                  className="w-5 h-5 cursor-pointer" 
+                  onClick={() => setShowSearchBar(!showSearchBar)} 
+                />
+                <Link to="/login">
+                  <User className="w-5 h-5 cursor-pointer" />
+                </Link>
+                <ShoppingBag 
+                  className="w-5 h-5 cursor-pointer" 
+                  onClick={() => setDrawerCartOpen(true)} 
+                />
+              </div>
+            </nav>
 
-                        {/* Right Section - Icons */}
-                        <div className="flex items-center gap-6 text-gray-700">
-                            <Search className="w-5 h-5 cursor-pointer" />
-                            <User className="w-5 h-5 cursor-pointer" />
-                            <ShoppingBag className="w-5 h-5 cursor-pointer" />
-                        </div>
-                        </nav>
-
-                        {/* Bottom Navigation Links */}
-                        <div className="px-6 pb-[1rem] pt-[0.1rem]">
-                        <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
-                            {navItems.map((item, index) => (
-                            <li key={index}>
-                                <NavLink
-                                to={item.path}
-                                className={({ isActive }) =>
-                                    `pb-2 hover:text-[#EAD6A6] hover:border-b hover:border-[#EAD6A6] transition-colors duration-300 ${
-                                    isActive ? "text-[#EAD6A6] font-bold border-b-2 border-[#EAD6A6]" : "text-gray-800"
-                                    }`
-                                }
-                                >
-                                {item.name}
-                                </NavLink>
-                            </li>
-                            ))}
-                        </ul>
-                        </div>
-                    </div>
-
-                    {/* Mobile Layout */}
-                    <div className="md:hidden">
-                        <nav className="px-4 py-4 flex items-center justify-between">
-                        {/* Logo - Left side */}
-                        <Link to="/">
-                            <img 
-                            src={logo} 
-                            alt="Sparklore Logo" 
-                            className="h-12 object-contain" 
-                            />
-                        </Link>
-
-                        {/* Icons - Right side */}
-                        <div className="flex items-center gap-4">
-                            <Search className="w-5 h-5 cursor-pointer" />
-                            <User className="w-5 h-5 cursor-pointer" />
-                            <ShoppingBag className="w-5 h-5 cursor-pointer" />
-                            <Menu 
-                            className="w-6 h-6 cursor-pointer" 
-                            onClick={() => setDrawerOpen(true)}
-                            />
-                        </div>
-                        </nav>
-                    </div>
-
-                    {/* Mobile Drawer (appears from right) */}
-                    {drawerOpen && (
-                        <div className="md:hidden fixed inset-0 z-50 bg-stone-500/30">
-                        <div 
-                            className="absolute right-0 h-full w-4/5 max-w-xs bg-[#fdfaf3] p-4 shadow-lg"
-                            style={{ animation: 'slideIn 0.3s ease-out' }}
-                        >
-                            <div className="flex justify-between items-center mb-8">
-                            <button className="flex items-center border rounded-full text-xs font-medium">
-                                <span className="px-3 py-1 bg-white rounded-l-full">EN</span>
-                                <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full">ID</span>
-                            </button>
-                            <button 
-                                className="text-gray-700 text-2xl"
-                                onClick={() => setDrawerOpen(false)}
-                            >
-                                ✕
-                            </button>
-                            </div>
-                            
-                            <ul className="space-y-4 uppercase text-base font-semibold">
-                            {navItems.map((item, index) => (
-                                <li key={index}>
-                                <NavLink
-                                    to={item.path}
-                                    className={({ isActive }) =>
-                                    `block py-2 hover:text-[#b87777] ${
-                                        isActive ? "text-[#b87777]" : "text-gray-800"
-                                    }`
-                                    }
-                                    onClick={() => setDrawerOpen(false)}
-                                >
-                                    {item.name}
-                                </NavLink>
-                                </li>
-                            ))}
-                            </ul>
-                        </div>
-                        </div>
-                    )}
-
-                    <div className="relative flex flex-col items-center justify-center text-center px-4 mt-10 md:mt-42 text-white">
-                        <h1 className="text-xl md:text-4xl mb-4 tracking-wider">
-                            Craft a Piece as Unique as You
-                        </h1>
-                        <p className="text-md md:text-3xl max-w-4xl leading-relaxed">
-                            Mix, match, and create—customize your jewelry with charms that reflect your style, memories, and moments.
-                        </p>
-                    </div>
-
-                {/* <button className="mt-8 px-8 py-3 bg-[#b87777] hover:bg-[#9a5f5f] text-white font-medium rounded-full transition-colors duration-300">
-                    Start Creating
-                </button> */}
-                </div>
+            {/* Bottom Navigation Links */}
+            <div className="px-6 pb-[1rem] pt-[0.1rem]">
+              <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
+                {navItems.map((item, index) => (
+                  <li key={index}>
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `pb-2 hover:text-[#EAD6A6] hover:border-b hover:border-[#EAD6A6] transition-colors duration-300 ${
+                          isInitialLoad || !isActive ? "text-gray-800" : "text-[#EAD6A6] font-bold border-b-2 border-[#EAD6A6]"
+                        }`
+                      }
+                    >
+                      {item.name}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
             </div>
+            
+            {showSearchBar && (
+              <div className="px-[0rem] pt-2 pb-4 animate-fadeIn border-t-2 border-[#e6d4a5]">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="COUPLE BRACELETS...."
+                    className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
+                  />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                  <button
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-xl"
+                    onClick={() => setShowSearchBar(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
+          {/* Mobile Layout */}
+          <div className="md:hidden">
+            <nav className="px-4 py-4 flex items-center justify-between">
+              <Link to="/">
+                <img src={logo} alt="Sparklore Logo" className="h-12 object-contain" />
+              </Link>
+              <div className="flex items-center gap-4">
+                <Search 
+                  className="w-5 h-5 cursor-pointer" 
+                  onClick={() => setShowSearchBar(!showSearchBar)} 
+                />
+                <Link to="/login">
+                  <User className="w-5 h-5 cursor-pointer" />
+                </Link>
+                <ShoppingBag 
+                  className="w-5 h-5 cursor-pointer" 
+                  onClick={() => setDrawerCartOpen(true)} 
+                />
+                <Menu 
+                  className="w-6 h-6 cursor-pointer" 
+                  onClick={() => setDrawerOpen(true)}
+                />
+              </div>
+            </nav>
+
+            {showSearchBar && (
+              <div className="px-4 pt-2 pb-4 animate-fadeIn border-t-2 border-[#e6d4a5]">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="COUPLE BRACELETS...."
+                    className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
+                  />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                  <button
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-xl"
+                    onClick={() => setShowSearchBar(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Shopping Cart Drawer */}
+          {drawerCartOpen && (
+            <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
+              <div className="bg-[#fdfaf3] sm:w-full md:w-[60%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
+                {/* Header */}
+                <div className="flex justify-between items-center border-b pb-4 mb-4">
+                  <h2 className="text-xl font-semibold tracking-widest text-gray-800">YOUR CART</h2>
+                  <button 
+                    className="text-2xl text-gray-700" 
+                    onClick={() => setDrawerCartOpen(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Cart Items */}
+                <div className="space-y-8">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex flex-col gap-2">
+                      <div className="flex gap-4">
+                        <input 
+                          type="checkbox" 
+                          className="w-5 h-5 mt-2" 
+                          checked={item.selected}
+                          onChange={() => toggleItemSelection(item.id)}
+                        />
+                        <img 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="w-[6rem] h-[6rem] object-cover rounded-md" 
+                        />
+                        <div className="flex-1">
+                          <div className="flex justify-between">
+                            <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                            <button className="text-sm text-gray-600">Edit</button>
+                          </div>
+                          <p className="text-[#b87777] font-semibold">{formatPrice(item.price)}</p>
+                          
+                          {item.charms && (
+                            <div className="text-sm mt-2">
+                              <p className="font-medium">Charm Selection</p>
+                              <div className="flex gap-1 mt-1">
+                                {item.charms.map((charm, index) => (
+                                  <img 
+                                    key={index} 
+                                    src={charm} 
+                                    className="w-6 h-6 border rounded-sm" 
+                                    alt={`charm ${index}`} 
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {item.message && (
+                            <div className="text-sm mt-2">
+                              <p className="font-medium">Special Message</p>
+                              <p className="italic text-sm text-gray-600">"{item.message}"</p>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 mt-2">
+                            <button 
+                              className="border px-2 rounded text-gray-700"
+                              onClick={() => handleQuantityChange(item.id, -1)}
+                            >
+                              -
+                            </button>
+                            <span className="text-black">{item.quantity}</span>
+                            <button 
+                              className="border px-2 rounded text-gray-700"
+                              onClick={() => handleQuantityChange(item.id, 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom Section */}
+                <div className="flex items-center justify-between mt-10 pt-6 border-t border-black">
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5" 
+                      checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
+                      onChange={toggleSelectAll}
+                    />
+                    <label className="text-sm font-semibold text-black">All</label>
+                  </div>
+                  <div className="flex gap-4 items-end">
+                    <p className="text-lg font-medium">Total</p>
+                    <p className="text-lg font-bold text-[#b87777]">
+                      {formatPrice(calculateTotal())}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="mt-6 space-y-4">
+                  <Link 
+                      to="/checkout" 
+                      className="w-full bg-[#e9d8a6] text-gray-800 font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition block text-center"
+                    >
+                      Checkout
+                    </Link>
+                  <button className="w-full bg-[#e4572e] text-white font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition">
+                    Shopee Checkout
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Drawer */}
+          {drawerOpen && (
+            <div className="md:hidden fixed inset-0 z-50 bg-stone-500/30">
+              <div 
+                className="absolute right-0 h-full w-4/5 max-w-xs bg-[#fdfaf3] p-4 shadow-lg"
+                style={{ animation: 'slideIn 0.3s ease-out' }}
+              >
+                <div className="flex justify-between items-center mb-8">
+                  <button className="flex items-center border rounded-full text-xs font-medium">
+                    <span className="px-3 py-1 bg-white rounded-l-full text-black">EN</span>
+                    <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full text-black">ID</span>
+                  </button>
+                  <button 
+                    className="text-gray-700 text-2xl"
+                    onClick={() => setDrawerOpen(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <ul className="space-y-4 uppercase text-base font-semibold">
+                  {navItems.map((item, index) => (
+                    <li key={index}>
+                      <NavLink
+                        to={item.path}
+                        className={({ isActive }) =>
+                          `block py-2 hover:text-[#b87777] ${
+                            isActive ? "text-[#b87777]" : "text-gray-800"
+                          }`
+                        }
+                        onClick={() => setDrawerOpen(false)}
+                      >
+                        {item.name}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          <div className="relative flex flex-col items-center justify-center text-center px-4 mt-10 md:mt-42 text-white">
+            <h1 className="text-xl md:text-4xl mb-4 tracking-wider">
+              Craft a Piece as Unique as You
+            </h1>
+            <p className="text-md md:text-3xl max-w-4xl leading-relaxed">
+              Mix, match, and create—customize your jewelry with charms that reflect your style, memories, and moments.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <style jsx>{`
         @keyframes slideIn {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
+        }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>

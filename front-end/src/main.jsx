@@ -11,10 +11,14 @@ import Earrings from './pages/earrings.jsx'
 import Bracelets from './pages/bracelets.jsx'
 import Necklaces from './pages/necklaces.jsx'
 import DetailPage from './pages/detail_page';
-
+import Login from './pages/login.jsx';
+import OTPCode from './pages/otpcode.jsx';
 
 import NotFound from './pages/not_found.jsx'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Checkout from './pages/checkout.jsx'
+import FinalCheckoutPage from './pages/final_checkout.jsx'
+import TrackingOrder from './pages/tracking_order.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -26,6 +30,13 @@ const router = createBrowserRouter([
   {path:"/bracelets", element: <Bracelets/>},
   {path:"/necklaces", element: <Necklaces/>},
   {path:"/products/:productId", element: <DetailPage />},
+  {path:"/login", element: <Login />},
+  {path:"/verify", element: <OTPCode />},
+  {path:"/checkout", element: <Checkout />},
+  {path:"/checkout/payment", element: <FinalCheckoutPage />},
+  {path:"/track-order", element: <TrackingOrder />},
+
+
   // {path:"/Bracelets", element: <Bracelets/>},
 
   {path:"*", element: <NotFound/>},

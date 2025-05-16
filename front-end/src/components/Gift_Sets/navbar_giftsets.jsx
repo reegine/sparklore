@@ -1,11 +1,35 @@
 import { Link, NavLink } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
+import product1 from "../../assets/default/homeproduct1.png";
+import product2 from "../../assets/default/homeproduct2.png";
 
 const NavBar_GiftSets = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCartOpen, setDrawerCartOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [cartItems, setCartItems] = useState([
+    {
+      id: 1,
+      name: "Charm Link Custom Bracelet",
+      price: 369998,
+      quantity: 1,
+      selected: false,
+      image: product1,
+      charms: [product1, product1, product1, product1, product1],
+      message: "This is for the special message if the user want to send a message to the recipient."
+    },
+    {
+      id: 2,
+      name: "Marbella Ring",
+      price: 99999,
+      quantity: 1,
+      selected: false,
+      image: product2
+    }
+  ]);
 
   const navItems = [
     { name: "Charm Bar", path: "/charmbar" },
@@ -18,13 +42,67 @@ const NavBar_GiftSets = () => {
   ];
 
   useEffect(() => {
-    // Set isInitialLoad to false after the component mounts
     setIsInitialLoad(false);
   }, []);
 
+  // Handle quantity change
+  const handleQuantityChange = (id, change) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: Math.max(1, item.quantity + change)
+            }
+          : item
+      )
+    );
+  };
+
+  // Toggle item selection
+  const toggleItemSelection = (id) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              selected: !item.selected
+            }
+          : item
+      )
+    );
+  };
+
+  // Toggle select all
+  const toggleSelectAll = () => {
+    const allSelected = cartItems.every(item => item.selected);
+    setCartItems(prevItems =>
+      prevItems.map(item => ({
+        ...item,
+        selected: !allSelected
+      }))
+    );
+  };
+
+  // Calculate total price
+  const calculateTotal = () => {
+    return cartItems
+      .filter(item => item.selected)
+      .reduce((total, item) => total + item.price * item.quantity, 0);
+  };
+
+  // Format price to Indonesian Rupiah
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price).replace('IDR', 'Rp.');
+  };
+
   return (
     <div className="bg-[#fdfaf3] shadow-md">
-      {/* Desktop Layout (unchanged from your original) */}
+      {/* Desktop Layout */}
       <div className="hidden md:block">
         <nav className="px-[9rem] pb-[2rem] pt-[1rem] flex items-center justify-between">
           {/* Left Section - Language Toggle */}
@@ -44,15 +122,23 @@ const NavBar_GiftSets = () => {
 
           {/* Right Section - Icons */}
           <div className="flex items-center gap-6 text-gray-700">
-            <Search className="w-5 h-5 cursor-pointer" />
-            <User className="w-5 h-5 cursor-pointer" />
-            <ShoppingBag className="w-5 h-5 cursor-pointer" />
+            <Search 
+              className="w-5 h-5 cursor-pointer" 
+              onClick={() => setShowSearchBar(!showSearchBar)} 
+            />
+            <Link to="/login">
+              <User className="w-5 h-5 cursor-pointer" />
+            </Link>
+            <ShoppingBag 
+              className="w-5 h-5 cursor-pointer" 
+              onClick={() => setDrawerCartOpen(true)} 
+            />
           </div>
         </nav>
 
         {/* Bottom Navigation Links */}
         <div className="px-6 pb-[1rem] pt-[0.1rem]">
-            <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
+          <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
             {navItems.map((item, index) => (
               <li key={index}>
                 <NavLink
@@ -69,34 +155,192 @@ const NavBar_GiftSets = () => {
             ))}
           </ul>
         </div>
+
+        {/* Search Bar */}
+        {showSearchBar && (
+          <div className="px-[9rem] pt-2 pb-4 animate-fadeIn border-t-2 border-[#e6d4a5]">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="GIFT SETS...."
+                className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+              <button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-xl"
+                onClick={() => setShowSearchBar(false)}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Shopping Cart Drawer */}
+      {drawerCartOpen && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
+          <div className="bg-[#fdfaf3] w-[70%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b pb-4 mb-4">
+              <h2 className="text-xl font-semibold tracking-widest text-gray-800">YOUR CART</h2>
+              <button 
+                className="text-2xl text-gray-700" 
+                onClick={() => setDrawerCartOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Cart Items */}
+            <div className="space-y-8">
+              {cartItems.map((item) => (
+                <div key={item.id} className="flex flex-col gap-2">
+                  <div className="flex gap-4">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 mt-2" 
+                      checked={item.selected}
+                      onChange={() => toggleItemSelection(item.id)}
+                    />
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="w-[6rem] h-[6rem] object-cover rounded-md" 
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between">
+                        <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                        <button className="text-sm text-gray-600">Edit</button>
+                      </div>
+                      <p className="text-[#b87777] font-semibold">{formatPrice(item.price)}</p>
+                      
+                      {item.charms && (
+                        <div className="text-sm mt-2">
+                          <p className="font-medium">Charm Selection</p>
+                          <div className="flex gap-1 mt-1">
+                            {item.charms.map((charm, index) => (
+                              <img 
+                                key={index} 
+                                src={charm} 
+                                className="w-6 h-6 border rounded-sm" 
+                                alt={`charm ${index}`} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {item.message && (
+                        <div className="text-sm mt-2">
+                          <p className="font-medium">Special Message</p>
+                          <p className="italic text-sm text-gray-600">"{item.message}"</p>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <button 
+                          className="border px-2 rounded text-gray-700"
+                          onClick={() => handleQuantityChange(item.id, -1)}
+                        >
+                          -
+                        </button>
+                        <span className="text-black">{item.quantity}</span>
+                        <button 
+                          className="border px-2 rounded text-gray-700"
+                          onClick={() => handleQuantityChange(item.id, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom Section */}
+            <div className="flex items-center justify-between mt-10 pt-6 border-t border-black">
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5" 
+                  checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
+                  onChange={toggleSelectAll}
+                />
+                <label className="text-sm font-semibold text-black">All</label>
+              </div>
+              <div className="flex gap-4 items-end">
+                <p className="text-lg font-medium">Total</p>
+                <p className="text-lg font-bold text-[#b87777]">
+                  {formatPrice(calculateTotal())}
+                </p>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="mt-6 space-y-4">
+              <Link 
+                to="/checkout" 
+                className="w-full bg-[#e9d8a6] text-gray-800 font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition block text-center"
+              >
+                Checkout
+              </Link>
+              <button className="w-full bg-[#e4572e] text-white font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition">
+                Shopee Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Layout */}
       <div className="md:hidden">
         <nav className="px-4 py-4 flex items-center justify-between">
-          {/* Logo - Left side */}
           <Link to="/">
-            <img 
-              src={logo} 
-              alt="Sparklore Logo" 
-              className="h-12 object-contain" 
-            />
+            <img src={logo} alt="Sparklore Logo" className="h-12 object-contain" />
           </Link>
-
-          {/* Icons - Right side */}
           <div className="flex items-center gap-4">
-            <Search className="w-5 h-5 cursor-pointer" />
-            <User className="w-5 h-5 cursor-pointer" />
-            <ShoppingBag className="w-5 h-5 cursor-pointer" />
+            <Search 
+              className="w-5 h-5 cursor-pointer" 
+              onClick={() => setShowSearchBar(!showSearchBar)} 
+            />
+            <Link to="/login">
+              <User className="w-5 h-5 cursor-pointer" />
+            </Link>
+            <ShoppingBag 
+              className="w-5 h-5 cursor-pointer" 
+              onClick={() => setDrawerCartOpen(true)} 
+            />
             <Menu 
               className="w-6 h-6 cursor-pointer" 
               onClick={() => setDrawerOpen(true)}
             />
           </div>
         </nav>
+
+        {/* Mobile Search Bar */}
+        {showSearchBar && (
+          <div className="px-4 pt-2 pb-4 animate-fadeIn border-t-2 border-[#e6d4a5]">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="GIFT SETS...."
+                className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+              <button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-xl"
+                onClick={() => setShowSearchBar(false)}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Mobile Drawer (appears from right) */}
+      {/* Mobile Drawer */}
       {drawerOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-stone-500/30">
           <div 
@@ -141,6 +385,19 @@ const NavBar_GiftSets = () => {
         @keyframes slideIn {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }
+        }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>

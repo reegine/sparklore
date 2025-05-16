@@ -101,7 +101,7 @@ const NavBar = () => {
   };
 
   return (
-    <div className="bg-[#fdfaf3] shadow-md">
+    <div className="bg-[#302E2A] shadow-md">
       {/* Desktop Layout */}
       <div className="hidden md:block">
         <nav className="px-[9rem] pb-[2rem] pt-[1rem] flex items-center justify-between">
@@ -121,7 +121,7 @@ const NavBar = () => {
           </div>
 
           {/* Right Section - Icons */}
-          <div className="flex items-center gap-6 text-gray-700">
+          <div className="flex items-center gap-6 text-white">
             <Search className="w-5 h-5 cursor-pointer" onClick={() => setShowSearchBar(!showSearchBar)} />
             <Link to="/login">
               <User className="w-5 h-5 cursor-pointer" />
@@ -142,7 +142,7 @@ const NavBar = () => {
                   to={item.path}
                   className={({ isActive }) =>
                     `pb-2 hover:text-[#b87777] hover:border-b hover:border-[#b87777] transition-colors duration-300 ${
-                      isInitialLoad || !isActive ? "text-gray-800" : "text-[#b87777] font-bold border-b-2 border-[#b87777]"
+                      isInitialLoad || !isActive ? "text-white" : "text-[#b87777] font-bold border-b-2 border-[#b87777]"
                     }`
                   }
                 >
@@ -361,7 +361,7 @@ const NavBar = () => {
                     to={item.path}
                     className={({ isActive }) =>
                       `block py-2 hover:text-[#b87777] ${
-                        isActive ? "text-[#b87777]" : "text-gray-800"
+                        isActive ? "text-[#b87777]" : "text-white"
                       }`
                     }
                     onClick={() => setDrawerOpen(false)}
