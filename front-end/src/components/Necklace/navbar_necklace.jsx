@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
@@ -11,6 +11,8 @@ const NavBar_Necklace = () => {
   const [drawerCartOpen, setDrawerCartOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -32,6 +34,14 @@ const NavBar_Necklace = () => {
     }
   ]);
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setShowSearchBar(false);
+    }
+  };
+
   const navItems = [
     { name: "Charm Bar", path: "/charmbar" },
     { name: "Necklaces", path: "/necklaces" },
@@ -46,7 +56,6 @@ const NavBar_Necklace = () => {
     setIsInitialLoad(false);
   }, []);
 
-  // Handle quantity change
   const handleQuantityChange = (id, change) => {
     setCartItems(prevItems =>
       prevItems.map(item =>
@@ -60,7 +69,6 @@ const NavBar_Necklace = () => {
     );
   };
 
-  // Toggle item selection
   const toggleItemSelection = (id) => {
     setCartItems(prevItems =>
       prevItems.map(item =>
@@ -74,7 +82,6 @@ const NavBar_Necklace = () => {
     );
   };
 
-  // Toggle select all
   const toggleSelectAll = () => {
     const allSelected = cartItems.every(item => item.selected);
     setCartItems(prevItems =>
@@ -85,14 +92,12 @@ const NavBar_Necklace = () => {
     );
   };
 
-  // Calculate total price
   const calculateTotal = () => {
     return cartItems
       .filter(item => item.selected)
       .reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  // Format price to Indonesian Rupiah
   const formatPrice = (price) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -170,20 +175,22 @@ const NavBar_Necklace = () => {
             
             {showSearchBar && (
               <div className="px-[0rem] pt-2 pb-4 animate-fadeIn border-t-2 border-[#e6d4a5]">
-                <div className="relative">
+                <form onSubmit={handleSearchSubmit} className="relative">
                   <input
                     type="text"
-                    placeholder="COUPLE BRACELETS...."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="NECKLACES...."
                     className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
                   <button
+                    type="submit"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-xl"
-                    onClick={() => setShowSearchBar(false)}
                   >
                     ✕
                   </button>
-                </div>
+                </form>
               </div>
             )}
           </div>
@@ -215,20 +222,22 @@ const NavBar_Necklace = () => {
 
             {showSearchBar && (
               <div className="px-4 pt-2 pb-4 animate-fadeIn border-t-2 border-[#e6d4a5]">
-                <div className="relative">
+                <form onSubmit={handleSearchSubmit} className="relative">
                   <input
                     type="text"
-                    placeholder="COUPLE BRACELETS...."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="NECKLACES...."
                     className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
                   <button
+                    type="submit"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-xl"
-                    onClick={() => setShowSearchBar(false)}
                   >
                     ✕
                   </button>
-                </div>
+                </form>
               </div>
             )}
           </div>
@@ -255,7 +264,7 @@ const NavBar_Necklace = () => {
                       <div className="flex gap-4">
                         <input 
                           type="checkbox" 
-                          className="w-5 h-5 mt-2" 
+                          className="custom-checkbox" 
                           checked={item.selected}
                           onChange={() => toggleItemSelection(item.id)}
                         />
@@ -269,7 +278,7 @@ const NavBar_Necklace = () => {
                             <h3 className="font-semibold text-gray-800">{item.name}</h3>
                             <button className="text-sm text-gray-600">Edit</button>
                           </div>
-                          <p className="text-[#b87777] font-semibold">{formatPrice(item.price)}</p>
+                          <p className="text-[#b87777] font-semibold text-start">{formatPrice(item.price)}</p>
                           
                           {item.charms && (
                             <div className="text-sm mt-2">
@@ -289,8 +298,8 @@ const NavBar_Necklace = () => {
                           
                           {item.message && (
                             <div className="text-sm mt-2">
-                              <p className="font-medium">Special Message</p>
-                              <p className="italic text-sm text-gray-600">"{item.message}"</p>
+                              <p className="font-medium text-start text-gray-600">Special Message</p>
+                              <p className="italic text-sm text-gray-600 text-start">"{item.message}"</p>
                             </div>
                           )}
                           
@@ -301,7 +310,7 @@ const NavBar_Necklace = () => {
                             >
                               -
                             </button>
-                            <span className="text-black">{item.quantity}</span>
+                            <span>{item.quantity}</span>
                             <button 
                               className="border px-2 rounded text-gray-700"
                               onClick={() => handleQuantityChange(item.id, 1)}
@@ -324,7 +333,7 @@ const NavBar_Necklace = () => {
                       checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
                       onChange={toggleSelectAll}
                     />
-                    <label className="text-sm font-semibold text-black">All</label>
+                    <label className="text-sm font-semibold  text-black">All</label>
                   </div>
                   <div className="flex gap-4 items-end">
                     <p className="text-lg font-medium">Total</p>
@@ -403,6 +412,44 @@ const NavBar_Necklace = () => {
       </div>
 
       <style jsx>{`
+        /* Custom checkbox styling */
+        input[type="checkbox"] {
+          -webkit-appearance: none;
+          appearance: none;
+          background-color: #fff;
+          margin: 0;
+          font: inherit;
+          color: #e9d8a6;
+          width: 1.25rem;
+          height: 1.25rem;
+          border: 1px solid #d1d5db;
+          border-radius: 0.25rem;
+          transform: translateY(-0.075em);
+          display: grid;
+          place-content: center;
+          cursor: pointer;
+        }
+
+        input[type="checkbox"]::before {
+          content: "";
+          width: 0.65rem;
+          height: 0.65rem;
+          transform: scale(0);
+          transition: 120ms transform ease-in-out;
+          box-shadow: inset 1rem 1rem #e9d8a6;
+          transform-origin: bottom left;
+          clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        input[type="checkbox"]:checked::before {
+          transform: scale(1);
+        }
+
+        input[type="checkbox"]:focus {
+          outline: 2px solid #3c3011;
+          outline-offset: 2px;
+        }
+
         @keyframes slideIn {
           from { transform: translateX(100%); }
           to { transform: translateX(0); }

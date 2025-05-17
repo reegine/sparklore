@@ -8,7 +8,7 @@ export default function TrackingOrder() {
       <>
           <NavBar_Checkout/>
           <OrderTrackingPage/>
-          <Footer />
+          {/* <Footer /> */}
       </>
     )
   }

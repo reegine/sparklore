@@ -1,4 +1,3 @@
-// src/pages/LoginPage.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,9 +9,20 @@ const LoginPage = () => {
     navigate('/verify');
   };
 
+  const handleBack = () => {
+    navigate(-1); // Navigate back to the previous page
+  };
+
   return (
-    <div className="min-h-screen bg-[#fdfaf3] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#fdfaf3] flex items-center justify-center px-4 relative">
       <div className="bg-white border border-[#f2e9d5] rounded-lg p-8 max-w-md w-full shadow-md">
+        <button
+          onClick={handleBack}
+          className="absolute top-4 left-4 flex items-center text-[#3b322c] font-medium hover:text-[#e9d6a9] transition"
+          aria-label="Go back"
+        >
+          <span className="mr-2 text-lg">&#8592;</span> Back
+        </button>
         <h1 className="text-2xl font-medium text-center text-[#3b322c]">Welcome to Sparklore!</h1>
         <p className="text-center text-[#3b322c] mt-2 mb-6">Enter your email and we will send you a login code</p>
 
@@ -39,3 +49,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+

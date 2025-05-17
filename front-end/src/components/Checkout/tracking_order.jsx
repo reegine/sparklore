@@ -93,7 +93,7 @@ const OrderTrackingPage = () => {
                     </div>
                   </div>
                   <div className="mt-2 text-sm">
-                    <p className="font-medium">Special Message</p>
+                    <p className="font-medium text-start text-gray-600">Special Message</p>
                     <p className="italic text-gray-600">"This is for the special message if the user want to send a message to the recipient."</p>
                   </div>
                 </div>

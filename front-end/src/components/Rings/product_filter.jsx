@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Star,
   Plus,
@@ -19,6 +20,7 @@ import product8 from "../../assets/default/charmbar_product8.png";
 
 const products = [
   {
+    id: 1,
     name: "CLASSIC SHIMMER CHAIN",
     type: "GOLD",
     price: "Rp 59.999,00",
@@ -26,8 +28,10 @@ const products = [
     rating: 0,
     image: product1,
     category: "Best Seller",
+    stock: 5, // Low stock
   },
   {
+    id: 2,
     name: "CLASSIC SERPENT CHAIN",
     type: "GOLD",
     price: "Rp 79.999,00",
@@ -35,8 +39,10 @@ const products = [
     rating: 0,
     image: product2,
     category: "New Arrival",
+    stock: 15, // Normal stock
   },
   {
+    id: 3,
     name: "CLASSIC SHIMMER CHAIN",
     type: "SILVER",
     price: "Rp 49.999,00",
@@ -44,8 +50,10 @@ const products = [
     rating: 0,
     image: product3,
     category: "Newest",
+    stock: 0, // Sold out
   },
   {
+    id: 4,
     name: "CLASSIC SERPENT CHAIN",
     type: "SILVER",
     price: "Rp 69.999,00",
@@ -53,8 +61,10 @@ const products = [
     rating: 0,
     image: product4,
     category: "Oldest",
+    stock: 8, // Low stock
   },
   {
+    id: 5,
     name: "THE CLASSIC SERPENT NECKLACE",
     type: "GOLD",
     price: "Rp 85.499,00",
@@ -62,8 +72,10 @@ const products = [
     rating: 1,
     image: product5,
     category: "Best Seller",
+    stock: 0, // Sold out
   },
   {
+    id: 6,
     name: "THE CLASSIC SERPENT NECKLACE",
     type: "SILVER",
     price: "Rp 85.499,00",
@@ -71,8 +83,10 @@ const products = [
     rating: 1,
     image: product6,
     category: "New Arrival",
+    stock: 2, // Low stock
   },
   {
+    id: 7,
     name: "THE LOVE LIFE NECKLACE",
     type: "GOLD",
     price: "Rp 99.999,00",
@@ -80,8 +94,10 @@ const products = [
     rating: 0,
     image: product7,
     category: "Newest",
+    stock: 12, // Normal stock
   },
   {
+    id: 8,
     name: "THE LOVE LIFE NECKLACE",
     type: "SILVER",
     price: "Rp 79.999,00",
@@ -89,10 +105,12 @@ const products = [
     rating: 0,
     image: product8,
     category: "Oldest",
+    stock: 1, // Low stock
   },
 ];
 
 export default function ProductGrid() {
+  const navigate = useNavigate();
   const [layout, setLayout] = useState("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -103,6 +121,10 @@ export default function ProductGrid() {
   });
   const [anchorEl, setAnchorEl] = useState(null);
   const [filteredProducts, setFilteredProducts] = useState(products);
+
+  const handleProductClick = (productId) => {
+    navigate(`/products/${productId}`);
+  };
 
   const productsPerPage = layout === "grid" ? 12 : 8;
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
@@ -185,7 +207,7 @@ export default function ProductGrid() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6 border-b border-[#ede7de] pb-2">
         <div className="flex gap-2 text-[#403c39]">
-        <button
+          <button
             onClick={() => setLayout("rows")}
             className={cn(
               "p-2 rounded",
@@ -204,7 +226,6 @@ export default function ProductGrid() {
           >
             <LayoutGrid size={20} />
           </button>
-         
         </div>
         <p className="text-sm text-[#b1a696] tracking-wide">
           {filteredProducts.length} Products
@@ -223,22 +244,48 @@ export default function ProductGrid() {
           layout === "grid" ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
         } gap-6`}
       >
-        {currentProducts.map((product, index) => (
+        {currentProducts.map((product) => (
           <div
-            key={index}
-            className="bg-white p-2 rounded-lg shadow-sm hover:shadow-md transition duration-200 relative"
+            key={product.id}
+            className={`p-2 rounded-lg  hover:shadow-md transition duration-200 relative  ${
+              product.stock === 0 ? 'opacity-70' : 'cursor-pointer'
+            }`}
+            onClick={() => product.stock > 0 && handleProductClick(product.id)}
           >
             <div className="relative">
               <img
                 src={product.image}
                 alt={product.name}
-                className="rounded-md w-full h-auto object-cover"
+                className={`rounded-md w-full h-auto object-cover ${
+                  product.stock === 0 ? 'grayscale' : ''
+                }`}
               />
-              <div className="absolute bottom-2 right-2 bg-white p-1 rounded-b-xs">
-                <button className="bg-white text-[#c3a46f] border border-[#c3a46f] p-1 rounded-full">
-                  <Plus size={16} />
-                </button>
-              </div>
+              
+              {/* Stock Status Badge */}
+              {product.stock === 0 ? (
+                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                  SOLD OUT
+                </div>
+              ) : product.stock < 10 ? (
+                <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
+                  LOW STOCK
+                </div>
+              ) : null}
+              
+              {/* Only show add to cart button if product is in stock */}
+              {product.stock > 0 && (
+                <div className="absolute bottom-2 right-2 bg-white p-1 rounded-b-xs">
+                  <button 
+                    className="bg-white text-[#c3a46f] border border-[#c3a46f] p-1 rounded-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Add to cart logic here
+                    }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="text-center mt-2">
               <p className="text-sm font-semibold uppercase text-[#403c39] leading-tight">
@@ -306,14 +353,14 @@ export default function ProductGrid() {
         </button>
       </div>
 
-       {/* Dark overlay when popup is open */}
-       {isPopupOpen && (
+      {/* Dark overlay when popup is open */}
+      {isPopupOpen && (
         <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} className="fixed inset-0 z-40 flex items-center justify-center">
             <div className="bg-white rounded-xl p-6 w-[300px] shadow-lg relative">
             {/* Popup content goes here */}
             </div>
         </div>
-        )}
+      )}
 
       {/* Filter Popup */}
       {isPopupOpen && (

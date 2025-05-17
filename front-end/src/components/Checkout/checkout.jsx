@@ -273,7 +273,7 @@ const CheckoutPage = () => {
                     )}
                     {item.message && (
                       <>
-                        <p className="text-sm mt-2">Special Message</p>
+                        <p className="text-sm mt-2 text-start text-gray-600">Special Message</p>
                         <p className="text-xs italic">"{item.message}"</p>
                       </>
                     )}

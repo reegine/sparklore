@@ -2,15 +2,17 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
-import banner from "../../assets/default/navbar_bracelet_bg.png";
+import banner from "../../assets/default/navbar_newarrival_bg.png";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
 
-const NavBar_Bracelet = () => {
+const NavBar_NewArrival = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCartOpen, setDrawerCartOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -31,9 +33,6 @@ const NavBar_Bracelet = () => {
       image: product2
     }
   ]);
-
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -110,6 +109,7 @@ const NavBar_Bracelet = () => {
   return (
     <div className="shadow-md">
       <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
+        {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${banner})` }}
@@ -117,9 +117,12 @@ const NavBar_Bracelet = () => {
           <div className="absolute inset-0 bg-black/30"></div>
         </div>
 
+        {/* Text Content - Centered */}
         <div className="relative flex flex-col md:items-center md:justify-center md:text-center text-white">
+          {/* Desktop Layout */}
           <div className="hidden md:block hover:bg-[#fdfaf3] w-full md:px-[7rem]">
             <nav className="px-8 pb-[2rem] pt-[1rem] flex items-center justify-between">
+              {/* Left Section - Language Toggle */}
               <div className="flex items-center">
                 <button className="flex items-center border rounded-full text-xs font-medium">
                   <span className="px-3 py-1 bg-white rounded-l-full text-[#302E2A]">EN</span>
@@ -127,12 +130,14 @@ const NavBar_Bracelet = () => {
                 </button>
               </div>
 
+              {/* Center Section - Logo */}
               <div className="flex-1 flex justify-center">
                 <Link to="/">
                   <img src={logo} alt="Sparklore Logo" className="h-[7rem] object-contain" />
                 </Link>
               </div>
 
+              {/* Right Section - Icons */}
               <div className="flex items-center gap-6 text-gray-700">
                 <Search 
                   className="w-5 h-5 cursor-pointer" 
@@ -148,6 +153,7 @@ const NavBar_Bracelet = () => {
               </div>
             </nav>
 
+            {/* Bottom Navigation Links */}
             <div className="px-6 pb-[1rem] pt-[0.1rem]">
               <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
                 {navItems.map((item, index) => (
@@ -174,7 +180,7 @@ const NavBar_Bracelet = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="COUPLE BRACELETS...."
+                    placeholder="NEW ARRIVALS...."
                     className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -189,6 +195,7 @@ const NavBar_Bracelet = () => {
             )}
           </div>
 
+          {/* Mobile Layout */}
           <div className="md:hidden">
             <nav className="px-4 py-4 flex items-center justify-between">
               <Link to="/">
@@ -220,7 +227,7 @@ const NavBar_Bracelet = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="COUPLE BRACELETS...."
+                    placeholder="NEW ARRIVALS...."
                     className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -235,9 +242,11 @@ const NavBar_Bracelet = () => {
             )}
           </div>
 
+          {/* Shopping Cart Drawer */}
           {drawerCartOpen && (
             <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
               <div className="bg-[#fdfaf3] sm:w-full md:w-[60%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
+                {/* Header */}
                 <div className="flex justify-between items-center border-b pb-4 mb-4">
                   <h2 className="text-xl font-semibold tracking-widest text-gray-800">YOUR CART</h2>
                   <button 
@@ -248,6 +257,7 @@ const NavBar_Bracelet = () => {
                   </button>
                 </div>
 
+                {/* Cart Items */}
                 <div className="space-y-8">
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex flex-col gap-2">
@@ -314,6 +324,7 @@ const NavBar_Bracelet = () => {
                   ))}
                 </div>
 
+                {/* Bottom Section */}
                 <div className="flex items-center justify-between mt-10 pt-6 border-t border-black">
                   <div className="flex gap-2 items-center">
                     <input 
@@ -332,6 +343,7 @@ const NavBar_Bracelet = () => {
                   </div>
                 </div>
 
+                {/* Buttons */}
                 <div className="mt-6 space-y-4">
                   <Link 
                     to="/checkout" 
@@ -347,6 +359,7 @@ const NavBar_Bracelet = () => {
             </div>
           )}
 
+          {/* Mobile Drawer */}
           {drawerOpen && (
             <div className="md:hidden fixed inset-0 z-50 bg-stone-500/30">
               <div 
@@ -389,16 +402,17 @@ const NavBar_Bracelet = () => {
 
           <div className="relative flex flex-col items-center justify-center text-center px-4 mt-10 md:mt-42 text-white">
             <h1 className="text-xl md:text-4xl mb-4 tracking-wider">
-              Every Charm, a Memory
+              Fresh Designs, Timeless Stories
             </h1>
             <p className="text-md md:text-3xl max-w-4xl leading-relaxed">
-              Build a bracelet that tells your story. Stack, layer, and customize with charms that mean the most to you.
+              Discover the latest creations, crafted to inspire. New charms, new styles—find your next favorite piece today.
             </p>
           </div>
         </div>
       </div>
 
       <style jsx>{`
+        /* Custom checkbox styling */
         input[type="checkbox"] {
           -webkit-appearance: none;
           appearance: none;
@@ -458,4 +472,4 @@ const NavBar_Bracelet = () => {
   );
 };
 
-export default NavBar_Bracelet;
+export default NavBar_NewArrival;

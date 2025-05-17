@@ -19,6 +19,7 @@ const HomePart2 = () => {
       rating: 0,
       price: "Rp 120.899,00",
       oldPrice: "Rp 129.999,00",
+      stock: 5, // Low stock (under 10)
     },
     {
       id: 2,
@@ -28,6 +29,7 @@ const HomePart2 = () => {
       rating: 1,
       price: "Rp 85.499,00",
       oldPrice: "Rp 89.999,00",
+      stock: 15, // Normal stock
     },
     {
       id: 3,
@@ -37,6 +39,7 @@ const HomePart2 = () => {
       rating: 1,
       price: "Rp 85.499,00",
       oldPrice: "Rp 89.999,00",
+      stock: 0, // Sold out
     },
     {
       id: 4,
@@ -46,6 +49,7 @@ const HomePart2 = () => {
       rating: 0,
       price: "Rp 225.990,00",
       oldPrice: "Rp 269.999,00",
+      stock: 3, // Low stock
     },
     {
       id: 5,
@@ -55,6 +59,7 @@ const HomePart2 = () => {
       rating: 0,
       price: "Rp 225.990,00",
       oldPrice: "Rp 269.999,00",
+      stock: 12, // Normal stock
     },
     {
       id: 6,
@@ -64,6 +69,7 @@ const HomePart2 = () => {
       rating: 0,
       price: "Rp 120.899,00",
       oldPrice: "Rp 129.999,00",
+      stock: 8, // Low stock
     },
     {
       id: 7,
@@ -73,6 +79,7 @@ const HomePart2 = () => {
       rating: 1,
       price: "Rp 85.499,00",
       oldPrice: "Rp 89.999,00",
+      stock: 0, // Sold out
     },
     {
       id: 8,
@@ -82,6 +89,7 @@ const HomePart2 = () => {
       rating: 1,
       price: "Rp 85.499,00",
       oldPrice: "Rp 89.999,00",
+      stock: 20, // Normal stock
     },
     {
       id: 9,
@@ -91,6 +99,7 @@ const HomePart2 = () => {
       rating: 0,
       price: "Rp 225.990,00",
       oldPrice: "Rp 269.999,00",
+      stock: 1, // Low stock
     },
     {
       id: 10,
@@ -100,6 +109,7 @@ const HomePart2 = () => {
       rating: 0,
       price: "Rp 225.990,00",
       oldPrice: "Rp 269.999,00",
+      stock: 0, // Sold out
     },
   ];
 
@@ -132,26 +142,41 @@ const HomePart2 = () => {
         {products.map((product) => (
           <div 
             key={product.id} 
-            className="p-4 cursor-pointer"
-            onClick={() => handleProductClick(product.id)}
+            className={`p-4 ${product.stock === 0 ? 'opacity-70' : 'cursor-pointer'}`}
+            onClick={() => product.stock > 0 && handleProductClick(product.id)}
           >
             <div className="relative">
               <img
                 src={product.image}
                 alt={product.name}
-                className="rounded-lg"
+                className={`rounded-lg ${product.stock === 0 ? 'grayscale' : ''}`}
               />
-              <div className="absolute bottom-2 right-2 bg-[#faf7f0] p-2 rounded-sm shadow">
-                <button 
-                  className="p-2 rounded-full border-2 border-[#e8d6a8] bg-[#faf7f0]"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent navigation when clicking the plus button
-                    // Add to cart logic here
-                  }}
-                >
-                  <Plus size={12} color="#e8d6a8" />
-                </button>
-              </div>
+              
+              {/* Stock Status Badge */}
+              {product.stock === 0 ? (
+                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                  SOLD OUT
+                </div>
+              ) : product.stock < 10 ? (
+                <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
+                  LOW STOCK
+                </div>
+              ) : null}
+              
+              {/* Only show add to cart button if product is in stock */}
+              {product.stock > 0 && (
+                <div className="absolute bottom-2 right-2 bg-[#faf7f0] p-2 rounded-sm shadow">
+                  <button 
+                    className="p-2 rounded-full border-2 border-[#e8d6a8] bg-[#faf7f0]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Add to cart logic here
+                    }}
+                  >
+                    <Plus size={12} color="#e8d6a8" />
+                  </button>
+                </div>
+              )}
             </div>
             <h3 className="mt-4 mb-2 text-lg font-semibold">{product.name}</h3>
             <span className="text-sm text-[#e8d6a8] px-2 py-1 rounded-md border-3 border-[#e8d6a8]">

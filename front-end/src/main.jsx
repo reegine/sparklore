@@ -19,6 +19,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Checkout from './pages/checkout.jsx'
 import FinalCheckoutPage from './pages/final_checkout.jsx'
 import TrackingOrder from './pages/tracking_order.jsx'
+import NewArrival from './pages/new_arrival.jsx'
+import Search from './pages/search.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -35,6 +37,9 @@ const router = createBrowserRouter([
   {path:"/checkout", element: <Checkout />},
   {path:"/checkout/payment", element: <FinalCheckoutPage />},
   {path:"/track-order", element: <TrackingOrder />},
+  {path:"/new-arrival", element: <NewArrival />},
+  {path:"/search", element: <Search />},
+
 
 
   // {path:"/Bracelets", element: <Bracelets/>},

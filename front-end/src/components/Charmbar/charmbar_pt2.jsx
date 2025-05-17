@@ -161,6 +161,52 @@ const charms = {
     { name: "Emerald", src: charm5 },
     // Ensure charm6 is defined if used
   ],
+  Zodiac: [
+    { name: "Aries", src: charm1 },
+    { name: "Taurus", src: charm2 },
+    { name: "Gemini", src: charm3 },
+    { name: "Cancer", src: charm4 },
+    { name: "Leo", src: charm5 },
+  ],
+  "Sparklore Specials": [
+    { name: "Special Charm 1", src: charm1 },
+    { name: "Special Charm 2", src: charm2 },
+    { name: "Special Charm 3", src: charm3 },
+    { name: "Special Charm 4", src: charm4 },
+    { name: "Special Charm 5", src: charm5 },
+  ],
+  AlphabetDD: [
+    { name: "Garnet", src: charm1 },
+    { name: "Amethyst", src: charm2 },
+    { name: "Aquamarine", src: charm3 },
+    { name: "Moonstone", src: charm4 },
+    { name: "Emerald", src: charm5 },
+    // Ensure charm6 is defined if used
+  ], // Add image sources and names later
+  BirthstoneCC: [
+    { name: "Garnet", src: charm1 },
+    { name: "Amethyst", src: charm2 },
+    { name: "Aquamarine", src: charm3 },
+    { name: "Moonstone", src: charm4 },
+    { name: "Emerald", src: charm5 },
+    // Ensure charm6 is defined if used
+  ],
+  "BirthstoneBB": [
+    { name: "Garnet", src: charm1 },
+    { name: "Amethyst", src: charm2 },
+    { name: "Aquamarine", src: charm3 },
+    { name: "Moonstone", src: charm4 },
+    { name: "Emerald", src: charm5 },
+    // Ensure charm6 is defined if used
+  ],
+  "BirthAA": [
+        { name: "Garnet", src: charm1 },
+    { name: "Amethyst", src: charm2 },
+    { name: "Aquamarine", src: charm3 },
+    { name: "Moonstone", src: charm4 },
+    { name: "Emerald", src: charm5 },
+    // Ensure charm6 is defined if used
+  ],
 };
 
 export default function CharmCustomizer() {
