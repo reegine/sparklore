@@ -1,11 +1,15 @@
 // src/pages/CodeVerificationPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { verifyOTP } from '../../utils/api';
 
 const CodeVerificationPage = () => {
   const [code, setCode] = useState(["", "", "", ""]);
-  const [timer, setTimer] = useState(59 * 60); // 59 minutes
+  const [timer, setTimer] = useState(59 * 60);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email;
 
   useEffect(() => {
     const countdown = setInterval(() => {
@@ -18,19 +22,21 @@ const CodeVerificationPage = () => {
     const newCode = [...code];
     newCode[index] = e.target.value.slice(0, 1);
     setCode(newCode);
-
-    // Auto-focus next input
     if (e.target.value && index < 3) {
       document.getElementById(`code-${index + 1}`).focus();
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const fullCode = code.join("");
     if (fullCode.length === 4) {
-      // handle verification logic
-      alert(`Verifying code: ${fullCode}`);
-      // navigate("/home"); // after verification
+      try {
+        const result = await verifyOTP(email, fullCode);
+        console.log(result); // optionally save token here
+        navigate("/home");
+      } catch (err) {
+        setError(err.message);
+      }
     }
   };
 
@@ -62,6 +68,8 @@ const CodeVerificationPage = () => {
           ))}
         </div>
 
+        {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+
         <p className="text-sm text-[#2d2d2d] mb-6">
           Code expires in <span className="font-medium">{formatTime()}</span>
         </p>
@@ -71,16 +79,6 @@ const CodeVerificationPage = () => {
           className="w-full py-3 bg-[#e8d49c] text-[#2d2d2d] font-medium rounded hover:opacity-90 transition mb-3"
         >
           Verify
-        </button>
-
-        <button
-          onClick={() => {
-            alert("Code sent again!");
-            setTimer(59 * 60);
-          }}
-          className="w-full py-3 border border-[#e8d49c] text-[#2d2d2d] font-medium rounded hover:bg-[#f7f1df] transition"
-        >
-          Send Again
         </button>
       </div>
     </div>
