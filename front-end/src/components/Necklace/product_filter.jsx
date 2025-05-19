@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Star,
@@ -8,106 +8,6 @@ import {
   Rows2,
 } from "lucide-react";
 import { cn } from "../../utils/utils.js";
-
-import product1 from "../../assets/default/charmbar_product1.png";
-import product2 from "../../assets/default/charmbar_product2.png";
-import product3 from "../../assets/default/charmbar_product3.png";
-import product4 from "../../assets/default/charmbar_product4.png";
-import product5 from "../../assets/default/charmbar_product5.png";
-import product6 from "../../assets/default/charmbar_product6.png";
-import product7 from "../../assets/default/charmbar_product7.png";
-import product8 from "../../assets/default/charmbar_product8.png";
-
-const products = [
-  {
-    id: 1,
-    name: "CLASSIC SHIMMER CHAIN",
-    type: "GOLD",
-    price: "Rp 59.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product1,
-    category: "Best Seller",
-    stock: 5, // Low stock
-  },
-  {
-    id: 2,
-    name: "CLASSIC SERPENT CHAIN",
-    type: "GOLD",
-    price: "Rp 79.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product2,
-    category: "New Arrival",
-    stock: 15, // Normal stock
-  },
-  {
-    id: 3,
-    name: "CLASSIC SHIMMER CHAIN",
-    type: "SILVER",
-    price: "Rp 49.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product3,
-    category: "Newest",
-    stock: 0, // Sold out
-  },
-  {
-    id: 4,
-    name: "CLASSIC SERPENT CHAIN",
-    type: "SILVER",
-    price: "Rp 69.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product4,
-    category: "Oldest",
-    stock: 8, // Low stock
-  },
-  {
-    id: 5,
-    name: "THE CLASSIC SERPENT NECKLACE",
-    type: "GOLD",
-    price: "Rp 85.499,00",
-    originalPrice: "Rp 89.999,00",
-    rating: 1,
-    image: product5,
-    category: "Best Seller",
-    stock: 0, // Sold out
-  },
-  {
-    id: 6,
-    name: "THE CLASSIC SERPENT NECKLACE",
-    type: "SILVER",
-    price: "Rp 85.499,00",
-    originalPrice: "Rp 89.999,00",
-    rating: 1,
-    image: product6,
-    category: "New Arrival",
-    stock: 2, // Low stock
-  },
-  {
-    id: 7,
-    name: "THE LOVE LIFE NECKLACE",
-    type: "GOLD",
-    price: "Rp 99.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product7,
-    category: "Newest",
-    stock: 12, // Normal stock
-  },
-  {
-    id: 8,
-    name: "THE LOVE LIFE NECKLACE",
-    type: "SILVER",
-    price: "Rp 79.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product8,
-    category: "Oldest",
-    stock: 1, // Low stock
-  },
-];
 
 export default function ProductGrid() {
   const navigate = useNavigate();
@@ -120,7 +20,65 @@ export default function ProductGrid() {
     price: [],
   });
   const [anchorEl, setAnchorEl] = useState(null);
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("http://192.168.1.12:8000/api/products/");
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+        const data = await response.json();
+        
+        // Filter only necklace products and transform data
+        let necklaceProducts = data
+          .filter(product => product.category.toLowerCase() === "necklace")
+          .map(product => ({
+            id: product.id,
+            name: product.name,
+            type: product.label.toUpperCase(),
+            price: `Rp ${parseFloat(product.price).toLocaleString('id-ID')}`,
+            originalPrice: null,
+            rating: parseFloat(product.rating) || 0,
+            image: product.image,
+            stock: product.stock,
+            createdAt: product.created_at || new Date().toISOString()
+          }));
+
+        // Identify best sellers (top 10 by rating)
+        const byRating = [...necklaceProducts].sort((a, b) => b.rating - a.rating);
+        const bestSellerIds = byRating.slice(0, 10).map(p => p.id);
+
+        // Identify new arrivals (top 10 most recent)
+        const byCreationDate = [...necklaceProducts].sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt));
+        const newArrivalIds = byCreationDate.slice(0, 10).map(p => p.id);
+
+        // Add category information to products
+        necklaceProducts = necklaceProducts.map(product => ({
+          ...product,
+          category: 
+            bestSellerIds.includes(product.id) ? "Best Seller" :
+            newArrivalIds.includes(product.id) ? "New Arrival" : 
+            "Regular"
+        }));
+
+        setProducts(necklaceProducts);
+        setFilteredProducts(necklaceProducts);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleProductClick = (productId) => {
     navigate(`/products/${productId}`);
@@ -202,6 +160,22 @@ export default function ProductGrid() {
     setCurrentPage(1);
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f3] px-6 py-10 font-serif flex items-center justify-center">
+        <p>Loading products...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f3] px-6 py-10 font-serif flex items-center justify-center">
+        <p>Error: {error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#fdf8f3] px-6 py-10 font-serif relative">
       {/* Header */}
@@ -247,7 +221,7 @@ export default function ProductGrid() {
         {currentProducts.map((product) => (
           <div
             key={product.id}
-            className={`p-2 rounded-lg  hover:shadow-md transition duration-200 relative  ${
+            className={`p-2 rounded-lg hover:shadow-md transition duration-200 relative ${
               product.stock === 0 ? 'opacity-70' : 'cursor-pointer'
             }`}
             onClick={() => product.stock > 0 && handleProductClick(product.id)}
@@ -271,6 +245,18 @@ export default function ProductGrid() {
                   LOW STOCK
                 </div>
               ) : null}
+              
+              {/* Category Badge */}
+              {product.category === "Best Seller" && (
+                <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded">
+                  BEST SELLER
+                </div>
+              )}
+              {product.category === "New Arrival" && (
+                <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded">
+                  NEW ARRIVAL
+                </div>
+              )}
               
               {/* Only show add to cart button if product is in stock */}
               {product.stock > 0 && (
@@ -312,7 +298,7 @@ export default function ProductGrid() {
                     />
                   ))}
                 <span className="text-xs text-gray-500 ml-1">
-                  ({product.rating})
+                  ({product.rating.toFixed(1)})
                 </span>
               </div>
               <div className="mt-1">
@@ -331,90 +317,87 @@ export default function ProductGrid() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-center mt-6">
-        <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="px-4 py-2 bg-[#c3a46f] text-white rounded-l"
-        >
-          Previous
-        </button>
-        <span className="px-4 py-2 text-[#403c39]">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
-          disabled={currentPage === totalPages}
-          className="px-4 py-2 bg-[#c3a46f] text-white rounded-r"
-        >
-          Next
-        </button>
-      </div>
-
-      {/* Dark overlay when popup is open */}
-      {isPopupOpen && (
-        <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} className="fixed inset-0 z-40 flex items-center justify-center">
-            <div className="bg-white rounded-xl p-6 w-[300px] shadow-lg relative">
-            {/* Popup content goes here */}
-            </div>
+      {filteredProducts.length > 0 && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-[#c3a46f] text-white rounded-l"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 text-[#403c39]">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-[#c3a46f] text-white rounded-r"
+          >
+            Next
+          </button>
         </div>
       )}
 
       {/* Filter Popup */}
       {isPopupOpen && (
-        <div
-          className="fixed z-50 bg-white rounded-xl p-6 w-[300px] shadow-lg border border-[#ede7de]"
-          style={{
-            top: "50%",
-            right: "50%",
-            transform: "translate(50%, -50%)",
-          }}
-        >
-          <div className="flex justify-between items-center border-b pb-2 mb-4">
-            <h2 className="text-lg font-serif tracking-wide text-[#403c39]">
-              FILTER
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={resetFilters}
-                className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleDone}
-                className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4 text-sm text-[#403c39]">
-            <div>
-              <h3 className="font-semibold mb-1">Material</h3>
-              <div className="flex gap-4">
-                {["GOLD", "SILVER"].map((val) => (
-                  <label key={val} className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={isChecked("material", val)}
-                      onChange={() => toggleFilter("material", val)}
-                      className="accent-[#c3a46f]"
-                    />
-                    {val.charAt(0) + val.slice(1).toLowerCase()}
-                  </label>
-                ))}
+        <>
+          <div 
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} className="fixed inset-0 z-40 flex items-center justify-center"
+            onClick={() => setIsPopupOpen(false)}
+          />
+          <div
+            className="fixed z-50 bg-white rounded-xl p-6 w-[300px] shadow-lg border border-[#ede7de]"
+            style={{
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <div className="flex justify-between items-center border-b pb-2 mb-4">
+              <h2 className="text-lg font-serif tracking-wide text-[#403c39]">
+                FILTER
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={resetFilters}
+                  className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={handleDone}
+                  className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
+                >
+                  Done
+                </button>
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-1">Product</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {["Best Seller", "New Arrival", "Newest", "Oldest"].map(
-                  (val) => (
+            <div className="space-y-4 text-sm text-[#403c39]">
+              <div>
+                <h3 className="font-semibold mb-1">Material</h3>
+                <div className="flex gap-4">
+                  {["GOLD", "SILVER"].map((val) => (
+                    <label key={val} className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={isChecked("material", val)}
+                        onChange={() => toggleFilter("material", val)}
+                        className="accent-[#c3a46f]"
+                      />
+                      {val.charAt(0) + val.slice(1).toLowerCase()}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-1">Product</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Best Seller", "New Arrival"].map((val) => (
                     <label key={val} className="flex items-center gap-1">
                       <input
                         type="checkbox"
@@ -424,30 +407,30 @@ export default function ProductGrid() {
                       />
                       {val}
                     </label>
-                  )
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <h3 className="font-semibold mb-1">Price</h3>
-              <div className="flex gap-4">
-                {["Low to High", "High to Low"].map((val) => (
-                  <label key={val} className="flex items-center gap-1">
-                    <input
-                      type="radio"
-                      name="price"
-                      checked={isChecked("price", val)}
-                      onChange={() => toggleFilter("price", val)}
-                      className="accent-[#c3a46f]"
-                    />
-                    {val}
-                  </label>
-                ))}
+              <div>
+                <h3 className="font-semibold mb-1">Price</h3>
+                <div className="flex gap-4">
+                  {["Low to High", "High to Low"].map((val) => (
+                    <label key={val} className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="price"
+                        checked={isChecked("price", val)}
+                        onChange={() => toggleFilter("price", val)}
+                        className="accent-[#c3a46f]"
+                      />
+                      {val}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
