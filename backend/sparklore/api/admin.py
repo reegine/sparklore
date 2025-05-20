@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Charm, Product, Order, Review, NewsletterSubscriber
+from .models import Charm, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm
 
 @admin.register(Charm)
 class CharmAdmin(admin.ModelAdmin):
@@ -27,3 +27,28 @@ class ReviewAdmin(admin.ModelAdmin):
 @admin.register(NewsletterSubscriber)
 class NewsletterSubscriberAdmin(admin.ModelAdmin):
     list_display = ('user', 'subscribed_at')
+
+class CartItemCharmInline(admin.TabularInline):
+    model = CartItemCharm
+    extra = 1
+
+class CartItemInline(admin.TabularInline):
+    model = CartItem
+    extra = 1
+    show_change_link = True
+
+@admin.register(Cart)
+class CartAdmin(admin.ModelAdmin):
+    list_display = ('user', 'created_at')
+    inlines = [CartItemInline]
+
+@admin.register(CartItem)
+class CartItemAdmin(admin.ModelAdmin):
+    list_display = ('cart', 'product', 'quantity')
+    list_filter = ('product',)
+    inlines = [CartItemCharmInline]
+
+@admin.register(CartItemCharm)
+class CartItemCharmAdmin(admin.ModelAdmin):
+    list_display = ('item', 'charm')
+    list_filter = ('charm',)
