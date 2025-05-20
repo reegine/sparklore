@@ -11,6 +11,7 @@ import Earrings from './pages/earrings.jsx'
 import Bracelets from './pages/bracelets.jsx'
 import Necklaces from './pages/necklaces.jsx'
 import DetailPage from './pages/detail_page';
+import DetailPageCharm from './pages/detail_page_charm';
 import Login from './pages/login.jsx';
 import OTPCode from './pages/otpcode.jsx';
 
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
   {path:"/bracelets", element: <Bracelets/>},
   {path:"/necklaces", element: <Necklaces/>},
   {path:"/products/:productId", element: <DetailPage />},
+  {path:"/products-charm/:productId", element: <DetailPageCharm />},
   {path:"/login", element: <Login />},
   {path:"/verify", element: <OTPCode />},
   {path:"/checkout", element: <Checkout />},

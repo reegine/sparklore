@@ -1,11 +1,10 @@
-// src/pages/CodeVerificationPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { verifyOTP } from '../../utils/api';
 
 const CodeVerificationPage = () => {
   const [code, setCode] = useState(["", "", "", ""]);
-  const [timer, setTimer] = useState(59 * 60);
+  const [timer, setTimer] = useState(5 * 60);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,8 +31,8 @@ const CodeVerificationPage = () => {
     if (fullCode.length === 4) {
       try {
         const result = await verifyOTP(email, fullCode);
-        console.log(result); // optionally save token here
-        navigate("/home");
+        // Token is automatically stored by the verifyOTP function
+        navigate("/"); // Redirect to home or wherever appropriate
       } catch (err) {
         setError(err.message);
       }
