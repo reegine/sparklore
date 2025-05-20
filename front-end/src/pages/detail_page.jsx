@@ -1,5 +1,6 @@
 // src/pages/detail_page.jsx
 import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Footer from '../components/footer.jsx';
 import NavBar from '../components/Home/navbar.jsx';
 import ProductDetail from '../components/ProductDetail/product_detail.jsx';
@@ -16,16 +17,16 @@ export default function DetailPage() {
   
   return (
     <>
-        <ScrollToTop />
-        <NavBar/>
-        <ProductDetail productId={productId} />
-        <InfoAccordion/>
-        <Recommend/>
-        <Features/>
-        <VideoCarousel/>
-        <Reviews/>
-        <JewelryGallery/>
-        <Footer />
+      <ScrollToTop />
+      <NavBar/>
+      <ProductDetail productId={productId} />
+      <InfoAccordion/>
+      <Recommend/>
+      <Features/>
+      <VideoCarousel/>
+      <Reviews/>
+      <JewelryGallery/>
+      <Footer />
     </>
   );
 }

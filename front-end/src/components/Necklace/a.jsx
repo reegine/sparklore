@@ -23,7 +23,6 @@ export default function ProductGrid() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
 
   // Fetch products from API
   useEffect(() => {
@@ -56,9 +55,9 @@ export default function ProductGrid() {
         const bestSellerIds = bySoldStock.slice(0, 10).map(p => p.id);
 
         // Identify new arrivals (top 10 most recent)
-        const byCreationDate = [...necklaceProducts].sort((a, b) => 
+        const byCreationDateNewest = [...necklaceProducts].sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt));
-        const newArrivalIds = byCreationDate.slice(0, 10).map(p => p.id);
+        const newArrivalIds = byCreationDateNewest.slice(0, 10).map(p => p.id);
 
         // Identify oldest products (top 10 oldest)
         const byCreationDateOldest = [...necklaceProducts].sort((a, b) => 
@@ -71,7 +70,6 @@ export default function ProductGrid() {
           isBestSeller: bestSellerIds.includes(product.id),
           isNewArrival: newArrivalIds.includes(product.id),
           isOldest: oldestIds.includes(product.id)
-
         }));
 
         setProducts(necklaceProducts);
@@ -87,8 +85,8 @@ export default function ProductGrid() {
   }, []);
 
   const handleProductClick = (productId) => {
-  navigate(`/products/${productId}`);
-};
+    navigate(`/products/${productId}`);
+  };
 
   const productsPerPage = layout === "grid" ? 12 : 8;
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
@@ -144,12 +142,7 @@ export default function ProductGrid() {
       filtered = filtered.filter((product) => {
         if (filters.product.includes("Best Seller") && product.isBestSeller) return true;
         if (filters.product.includes("New Arrival") && product.isNewArrival) return true;
-        if (filters.product.includes("Newest")) {
-          // Newest is same as New Arrival in this implementation
-          return product.isNewArrival;
-        }
         if (filters.product.includes("Oldest") && product.isOldest) return true;
-
         return false;
       });
     }
@@ -413,7 +406,7 @@ export default function ProductGrid() {
               <div>
                 <h3 className="font-semibold mb-1">Product</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {["Best Seller", "New Arrival", "Newest", "Oldest"].map((val) => (
+                  {["Best Seller", "New Arrival", "Oldest"].map((val) => (
                     <label key={val} className="flex items-center gap-1">
                       <input
                         type="checkbox"
