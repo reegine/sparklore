@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Charm, Product, Order, Review, NewsletterSubscriber
+from .models import Charm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm
 
 class NewsletterSubscriberSerializer(serializers.ModelSerializer):
     class Meta:
@@ -82,3 +82,20 @@ class ReviewSerializer(serializers.ModelSerializer):
         if value < 1 or value > 5:
             raise serializers.ValidationError("Rating harus antara 1 dan 5.")
         return value
+    
+class CartItemCharmSerializer(serializers.ModelSerializer):
+    class Meta: model = CartItemCharm; fields = ['charm_id']
+
+class CartItemSerializer(serializers.ModelSerializer):
+    charms = serializers.PrimaryKeyRelatedField(queryset=Charm.objects.all(), many=True)
+    class Meta:
+        model = CartItem; fields = ['id','product','quantity','charms']
+
+    def validate_charms(self, value):
+        if len(value) > 5:
+            raise serializers.ValidationError('Max 5 charms per item')
+        return value
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True)
+    class Meta: model = Cart; fields = ['id','items']

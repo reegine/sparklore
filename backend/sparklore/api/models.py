@@ -53,6 +53,8 @@ class Product(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     description = models.TextField(blank=True, null=True)
     stock = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    sold_stok = models.IntegerField(default=0)
 
     # Produk di dalam gift set
     gift_set_products = models.ManyToManyField('self', blank=True, symmetrical=False)
@@ -97,3 +99,17 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user_name} - {self.rating}⭐"
+    
+class Cart(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
+
+class CartItemCharm(models.Model):
+    item = models.ForeignKey(CartItem, on_delete=models.CASCADE)
+    charm = models.ForeignKey(Charm, on_delete=models.CASCADE)

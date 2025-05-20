@@ -12,8 +12,6 @@ class EmailBackend(BaseBackend):
             return None
 
         if user.check_password(password):
-            user.last_online = now()
-            user.save(update_fields=['last_online'])
             return user
         return None
 
