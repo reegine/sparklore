@@ -1,13 +1,14 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Charm, Product, Cart, CartItem, Order #Payment
+from .models import Charm, NewsletterSubscriber, Review, Product, Cart, CartItem, Order #Payment
 from .serializers import (
     CharmSerializer, ProductSerializer,
     CartSerializer, CartItemSerializer,
-    OrderSerializer, #PaymentSerializer
+    OrderSerializer, NewsletterSubscriberSerializer,
+    ReviewSerializer #PaymentSerializer
 )
 # from .services import MidtransService, RajaOngkirService
 from django.db import transaction
@@ -15,14 +16,22 @@ from django.db import transaction
 class CharmViewSet(viewsets.ModelViewSet):
     queryset = Charm.objects.all()
     serializer_class = CharmSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'category']
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'category', 'label']
     ordering_fields = ['price', 'rating']
@@ -40,8 +49,9 @@ class CartViewSet(viewsets.ViewSet):
         serializer = CartItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         item = serializer.save(cart=cart)
-        item.charms.set(serializer.validated_data['charms'])
-        return Response(CartSerializer(cart).data)
+        if 'charms' in serializer.validated_data:
+            item.charms.set(serializer.validated_data['charms'])
+        return Response(CartSerializer(cart).data, status=status.HTTP_201_CREATED)        
 
     @action(detail=True, methods=['patch'])
     def update_item(self, request, pk=None):
@@ -60,6 +70,19 @@ class CartViewSet(viewsets.ViewSet):
         item.delete()
         cart = Cart.objects.get(user=request.user)
         return Response(CartSerializer(cart).data)
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['user_name', 'products__name']
+    ordering_fields = ['rating', 'uploaded_at']
+
+class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
+    queryset = NewsletterSubscriber.objects.all()
+    serializer_class = NewsletterSubscriberSerializer
+    permission_classes = [AllowAny]
 
 # @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
