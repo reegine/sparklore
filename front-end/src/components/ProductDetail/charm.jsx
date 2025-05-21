@@ -96,7 +96,7 @@ const formatIDR = (amount) => {
   return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
 };
 
-const ProductDetailCharm = () => {
+const ProductDetailCharmBar = () => {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -231,137 +231,111 @@ const ProductDetailCharm = () => {
 
   return (
     <div className='bg-[#faf7f0] relative'>
-      {/* Popup Overlay */}
-      {showPopup && (
-        <>
-          {showCharms && (
-            <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
-              <div className="bg-[#fdfaf3] p-6 rounded-2xl border-2 border-black text-center max-w-xl w-full">
-                <h2 className="text-2xl font-semibold text-[#3b322c]">SURPRISE!</h2>
-                <p className="mt-2 text-[#3b322c]">You've unlock limited edition charms, do you want to add them for only Rp. 89.999/charm</p>
+    
+    
+{/* CHARM BAR SECTION */}
+        <div className="pt-20 max-w-7xl mx-auto px-6 md:px-16 py-10">          
 
-                <div className="grid grid-cols-4 gap-4 my-6">
-                  {product.charms_detail.map((charm, index) => (
-                    <div key={index} className="flex flex-col items-center">
-                      <img src={charm.image} alt={charm.name} className="h-12" />
-                      <span className="text-[#3b322c] mt-1">{charm.name}</span>
-                    </div>
+          {/* CUSTOMIZER */}
+          {baseImage && (
+            <>
+              <h2 className="text-xl font-medium mb-4">Customize Your Charm</h2>
+              <div className="flex flex-wrap gap-2 mb-6">
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => {
+                      setCharmCount(num);
+                      setSelectedTab(1);
+                      setSelectedCharms({});
+                    }}
+                    className={clsx("px-4 py-2 border rounded transition", charmCount === num ? "bg-[#e6d5a7]" : "bg-white")}
+                  >
+                    {num} Charm{num > 1 && "s"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-col lg:flex-row gap-8">
+                <div className="bg-white rounded w-full max-w-xl aspect-square p-4 relative">
+                  <img src={baseImage} alt="Base" className="w-full h-full object-contain" />
+                  {Array.from({ length: charmCount }, (_, i) => (
+                    selectedCharms[i + 1] && (
+                      <img
+                        key={i}
+                        src={selectedCharms[i + 1].src}
+                        alt={`Charm ${i + 1}`}
+                        className="absolute inset-0 object-cover w-full h-full"
+                        style={{ zIndex: i + 1 }}
+                      />
+                    )
                   ))}
                 </div>
 
-                <div className="flex gap-4 justify-center">
-                  <button onClick={handleAddOrSkipCharms} className="bg-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Add</button>
-                  <button onClick={handleAddOrSkipCharms} className="border border-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Maybe Next Time</button>
+                <div className="flex-1">
+                  <div className="text-2xl font-semibold mb-4">
+                    Rp {formatIDR(139999 + (charmCount - 1) * 25000)}
+                  </div>
+
+                  <div className="flex gap-2 mb-4">
+                    {Array.from({ length: charmCount }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedTab(i + 1)}
+                        className={clsx(
+                          "px-4 py-1 rounded border",
+                          selectedTab === i + 1 ? "bg-[#e6d5a7]" : "bg-white"
+                        )}
+                      >
+                        Charm {i + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button className="w-full bg-[#e6d5a7] text-center py-2 rounded mb-4 font-medium">
+                    Add to cart
+                  </button>
+
+                  <div className="space-y-4 max-h-[25vw] overflow-y-auto pr-2">
+                    {Object.keys(charms).map((category) => (
+                      <div key={category} className="mb-2">
+                        <button
+                          onClick={() => setOpenCategory(openCategory === category ? null : category)}
+                          className="w-full flex justify-between items-center py-2 border-b"
+                        >
+                          <span>{category}</span>
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        {openCategory === category && (
+                          <div className="grid grid-cols-3 gap-2 p-2">
+                            {charms[category].map((charm, i) => (
+                              <div key={i} className="relative cursor-pointer group" onClick={() => handleCharmSelect(charm)}>
+                                <img
+                                  src={charm.src}
+                                  alt={charm.name}
+                                  className="hover:scale-105 transition rounded border p-1 w-full"
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 flex justify-center items-center text-white text-sm font-semibold transition">
+                                  {charm.name}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>               
                 </div>
               </div>
-            </div>
+            </>
           )}
 
-          {showNote && (
-            <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
-              <div className="bg-[#fdfaf3] p-6 rounded-2xl border-2 border-black text-center max-w-lg w-full">
-                <h2 className="text-2xl font-semibold text-[#3b322c]">Make It Extra Special</h2>
-                <p className="mt-2 text-[#3b322c]">Write a special notes for someone you love!</p>
-
-                <textarea
-                  maxLength={65}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Write it and we'll deliver!"
-                  className="w-full mt-4 p-4 border border-[#e9d6a9] rounded-md bg-transparent text-[#3b322c] placeholder-[#3b322c] h-40 resize-none"
-                ></textarea>
-                <div className="text-right text-sm text-[#3b322c]">{note.length}/65</div>
-
-                <div className="flex gap-4 justify-center mt-4">
-                  <button onClick={handleNoteSubmit} className="bg-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Add</button>
-                  <button onClick={handleNoteSubmit} className="border border-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Maybe Next Time</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="max-w-7xl mx-auto px-6 md:px-16 py-10 font-serif text-[#2d2a26]">
-        {/* Breadcrumb */}
-        <div className="text-sm text-gray-400 mb-4">
-          Home &gt; <span className="text-gray-500">{product.category}</span> &gt; <span className="text-black font-medium">{product.name}</span>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-10">
-          {/* Thumbnail Images */}
-          <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-visible pb-2 order-2 md:order-1">
-            {thumbnails.map((src, idx) => (
-              <img
-                key={idx}
-                src={src}
-                alt={`Thumbnail ${idx + 1}`}
-                onClick={() => setMainImage(src)}
-                className="flex-shrink-0 w-16 h-16 object-cover rounded cursor-pointer border border-gray-200 hover:border-gray-400 transition"
-              />
-            ))}
-          </div>
 
-          {/* Main Product Image */}
-          <div className="flex-1 order-1 md:order-2">
-            <img
-              src={mainImage}
-              alt={product.name}
-              className="w-full max-w-lg rounded-lg shadow-md"
-            />
-          </div>
-
-          {/* Product Info */}
-          <div className="flex-1 order-3">
-            <h2 className="text-2xl md:text-3xl font-semibold mb-2">{product.name}</h2>
-            <div className="text-xs tracking-wider border border-[#f6e3b8] text-[#a9a9a9] px-2 py-0.5 inline-block mb-2">
-              {product.label.toUpperCase()}
-            </div>
-            <p className="text-lg font-bold mb-4">Rp {parseFloat(product.price).toLocaleString('id-ID')}</p>
-            
-            {/* Divider for mobile only */}
-            <div className="md:hidden border-t border-gray-200 my-4"></div>
-
-            <p className="text-base text-[#4d4a45] mb-4 leading-relaxed">
-              {product.description}
-            </p>
-
-            <div className="text-sm">
-              <p className="mb-1 font-medium">Product Details</p>
-              <ul className="list-disc pl-5 text-[#4d4a45]">
-                <li>Material: {product.label}</li>
-                <li>Stock: {product.stock} available</li>
-                {product.charms_detail.length > 0 && (
-                  <li>Compatible charms: {product.charms_detail.map(c => c.name).join(', ')}</li>
-                )}
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Add to Cart Button */}
-        <div className="mt-10 md:block hidden">
-          <button 
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`w-[53%] px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
-          >
-            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-          </button>
-        </div>
-        <div className="mt-6 md:hidden order-4">
-          <button 
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`w-full px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
-          >
-            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-          </button>
-        </div>
-
-      </div>
     </div>
   );
 };
 
-export default ProductDetailCharm;
+export default ProductDetailCharmBar;
+

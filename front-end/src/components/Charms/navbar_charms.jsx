@@ -8,7 +8,7 @@ import product2 from "../../assets/default/homeproduct2.png";
 import { isLoggedIn, logout, getAuthData } from "../../utils/api.js";
 import Snackbar from '../snackbar.jsx';
 
-const NavBar_Rings = () => {
+const NavBar_Charms = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCartOpen, setDrawerCartOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -19,6 +19,9 @@ const NavBar_Rings = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -40,10 +43,6 @@ const NavBar_Rings = () => {
     }
   ]);
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
-
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -52,6 +51,17 @@ const NavBar_Rings = () => {
     }
   };
 
+  const navItems = [
+    { name: "Charm Bar", path: "/charmbar" },
+    { name: "Charms", path: "/charms" },
+    { name: "Necklaces", path: "/necklaces" },
+    { name: "Bracelets", path: "/bracelets" },
+    { name: "Earrings", path: "/earrings" },
+    { name: "Rings", path: "/rings" },
+    { name: "Anklets", path: "/anklets" },
+    { name: "Gift Sets", path: "/giftsets" },
+  ];
+
   useEffect(() => {
     setIsInitialLoad(false);
 
@@ -59,15 +69,12 @@ const NavBar_Rings = () => {
       // setSnackbarMessage('Successfully logged in');
       // setSnackbarType('success');
       // setShowSnackbar(true);
-      // Clear the state so it doesn't show again on refresh
       navigate(location.pathname, { replace: true, state: {} });
     }
 
-    // Initial check
     const checkAuth = () => {
       const loggedIn = isLoggedIn();
       if (loggedIn && !isLoggedInState) {
-        // Just logged in
         // setSnackbarMessage('Successfully logged in');
         // setSnackbarType('success');
         // setShowSnackbar(true);
@@ -77,7 +84,6 @@ const NavBar_Rings = () => {
 
     checkAuth();
     
-    // Listen for storage changes
     const handleStorageChange = (e) => {
       if (e.key === 'authData') {
         checkAuth();
@@ -105,20 +111,9 @@ const NavBar_Rings = () => {
     setSnackbarMessage('Successfully logged out');
     setSnackbarType('success');
     setShowSnackbar(true);
-    setShowLogoutConfirm(false); // Close the confirmation dialog
+    setShowLogoutConfirm(false);
     navigate('/');
   };
-
-  const navItems = [
-    { name: "Charm Bar", path: "/charmbar" },
-    { name: "Charms", path: "/charms" },
-    { name: "Necklaces", path: "/necklaces" },
-    { name: "Bracelets", path: "/bracelets" },
-    { name: "Earrings", path: "/earrings" },
-    { name: "Rings", path: "/rings" },
-    { name: "Anklets", path: "/anklets" },
-    { name: "Gift Sets", path: "/giftsets" },
-  ];
 
   const handleQuantityChange = (id, change) => {
     setCartItems(prevItems =>
@@ -198,16 +193,9 @@ const NavBar_Rings = () => {
         </div>
       )}
 
-      <Snackbar 
-        message={snackbarMessage}
-        show={showSnackbar}
-        onClose={() => setShowSnackbar(false)}
-        type={snackbarType}
-      />
-
-      {/* Login Prompt Popup */}
+      {/* Add the login prompt popup */}
       {showLoginPrompt && (
-        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+        <div className="fixed inset-0 z-[999] bg-black/30 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Login Required</h3>
@@ -234,8 +222,14 @@ const NavBar_Rings = () => {
         </div>
       )}
 
+      <Snackbar 
+        message={snackbarMessage}
+        show={showSnackbar}
+        onClose={() => setShowSnackbar(false)}
+        type={snackbarType}
+      />
+
       <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
-        {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${banner})` }}
@@ -243,12 +237,9 @@ const NavBar_Rings = () => {
           <div className="absolute inset-0 bg-black/30"></div>
         </div>
 
-        {/* Text Content - Centered */}
         <div className="relative flex flex-col md:items-center md:justify-center md:text-center text-white">
-          {/* Desktop Layout */}
           <div className="hidden md:block hover:bg-[#fdfaf3] w-full md:px-[7rem]">
             <nav className="px-8 pb-[2rem] pt-[1rem] flex items-center justify-between">
-              {/* Left Section - Language Toggle */}
               <div className="flex items-center">
                 <button className="flex items-center border rounded-full text-xs font-medium">
                   <span className="px-3 py-1 bg-white rounded-l-full text-[#302E2A]">EN</span>
@@ -256,14 +247,12 @@ const NavBar_Rings = () => {
                 </button>
               </div>
 
-              {/* Center Section - Logo */}
               <div className="flex-1 flex justify-center">
                 <Link to="/">
                   <img src={logo} alt="Sparklore Logo" className="h-[7rem] object-contain" />
                 </Link>
               </div>
 
-              {/* Right Section - Icons */}
               <div className="flex items-center gap-6 text-gray-700">
                 <Search 
                   className="w-5 h-5 cursor-pointer" 
@@ -287,7 +276,6 @@ const NavBar_Rings = () => {
               </div>
             </nav>
 
-            {/* Bottom Navigation Links */}
             <div className="px-6 pb-[1rem] pt-[0.1rem]">
               <ul className="flex justify-center md:gap-6 lg:gap-30 uppercase text-xs md:text-lg font-semibold tracking-wider text-center">
                 {navItems.map((item, index) => (
@@ -329,7 +317,6 @@ const NavBar_Rings = () => {
             )}
           </div>
 
-          {/* Mobile Layout */}
           <div className="md:hidden">
             <nav className="px-4 py-4 flex items-center justify-between">
               <Link to="/">
@@ -384,11 +371,9 @@ const NavBar_Rings = () => {
             )}
           </div>
 
-          {/* Shopping Cart Drawer */}
           {drawerCartOpen && (
             <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
               <div className="bg-[#fdfaf3] sm:w-full md:w-[60%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
-                {/* Header */}
                 <div className="flex justify-between items-center border-b pb-4 mb-4">
                   <h2 className="text-xl font-semibold tracking-widest text-gray-800">YOUR CART</h2>
                   <button 
@@ -399,7 +384,6 @@ const NavBar_Rings = () => {
                   </button>
                 </div>
 
-                {/* Cart Items */}
                 <div className="space-y-8">
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex flex-col gap-2">
@@ -466,12 +450,11 @@ const NavBar_Rings = () => {
                   ))}
                 </div>
 
-                {/* Bottom Section */}
                 <div className="flex items-center justify-between mt-10 pt-6 border-t border-black">
                   <div className="flex gap-2 items-center">
                     <input 
                       type="checkbox" 
-                      className="custom-checkbox" 
+                      className="w-5 h-5" 
                       checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
                       onChange={toggleSelectAll}
                     />
@@ -485,7 +468,6 @@ const NavBar_Rings = () => {
                   </div>
                 </div>
 
-                {/* Buttons */}
                 <div className="mt-6 space-y-4">
                   <Link 
                     to="/checkout" 
@@ -501,7 +483,6 @@ const NavBar_Rings = () => {
             </div>
           )}
 
-          {/* Mobile Drawer */}
           {drawerOpen && (
             <div className="md:hidden fixed inset-0 z-50 bg-stone-500/30">
               <div 
@@ -554,14 +535,6 @@ const NavBar_Rings = () => {
       </div>
 
       <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        /* Custom checkbox styling */
         input[type="checkbox"] {
           -webkit-appearance: none;
           appearance: none;
@@ -599,14 +572,8 @@ const NavBar_Rings = () => {
           outline-offset: 2px;
         }
 
-        /* Rest of your animations */
         @keyframes slideIn {
           from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-
-        @keyframes slideInLeft {
-          from { transform: translateX(-100%); }
           to { transform: translateX(0); }
         }
 
@@ -627,4 +594,4 @@ const NavBar_Rings = () => {
   );
 };
 
-export default NavBar_Rings;
+export default NavBar_Charms;

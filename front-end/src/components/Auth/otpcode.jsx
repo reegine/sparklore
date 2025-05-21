@@ -1,15 +1,15 @@
-// src/pages/CodeVerificationPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { verifyOTP } from '../../utils/api';
 
 const CodeVerificationPage = () => {
   const [code, setCode] = useState(["", "", "", ""]);
-  const [timer, setTimer] = useState(59 * 60);
+  const [timer, setTimer] = useState(5 * 60);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email;
+  const [showSnackbar, setShowSnackbar] = useState(false);
 
   useEffect(() => {
     const countdown = setInterval(() => {
@@ -32,8 +32,15 @@ const CodeVerificationPage = () => {
     if (fullCode.length === 4) {
       try {
         const result = await verifyOTP(email, fullCode);
-        console.log(result); // optionally save token here
-        navigate("/home");
+        // Store in location state to trigger snackbar in NavBar
+        navigate("/", { state: { showLoginSuccess: true } });
+        if (location.state?.showLoginSuccess) {
+        setSnackbarMessage('You are logged in');
+        setSnackbarType('success');
+        setShowSnackbar(true);
+        // Clear the state so it doesn't show again on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
       } catch (err) {
         setError(err.message);
       }

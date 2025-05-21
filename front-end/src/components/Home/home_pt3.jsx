@@ -1,121 +1,68 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import product1 from "../../assets/default/homeproduct1.png";
-import product4 from "../../assets/default/homeproduct4.png";
-import product5 from "../../assets/default/homeproduct5.jpeg";
-import product6 from "../../assets/default/homeproduct6.jpeg";
-import product7 from "../../assets/default/homeproduct7.png";
 
 const HomePart3 = () => {
   const navigate = useNavigate();
-  
-  const products = [
-    {
-      id: 1,
-      image: product4,
-      name: "TWILIGHT ZIRCON ANKLET ROSE GOLD",
-      tag: "ROSE GOLD",
-      rating: 0,
-      price: "Rp 120.899,00",
-      oldPrice: "Rp 129.999,00",
-      stock: 5, // Low stock
-    },
-    {
-      id: 2,
-      image: product5,
-      name: "THE CLASSIC SERPENT NECKLACE",
-      tag: "GOLD",
-      rating: 1,
-      price: "Rp 85.499,00",
-      oldPrice: "Rp 89.999,00",
-      stock: 15, // Normal stock
-    },
-    {
-      id: 3,
-      image: product6,
-      name: "THE CLASSIC SERPENT NECKLACE",
-      tag: "SILVER",
-      rating: 1,
-      price: "Rp 85.499,00",
-      oldPrice: "Rp 89.999,00",
-      stock: 0, // Sold out
-    },
-    {
-      id: 4,
-      image: product7,
-      name: "CLASSIC MAGNET LOVE COUPLE BRACELET",
-      tag: "SILVER",
-      rating: 0,
-      price: "Rp 225.990,00",
-      oldPrice: "Rp 269.999,00",
-      stock: 3, // Low stock
-    },
-    {
-      id: 5,
-      image: product1,
-      name: "LUNA PIN CHAIN",
-      tag: "GOLD",
-      rating: 0,
-      price: "Rp 225.990,00",
-      oldPrice: "Rp 269.999,00",
-      stock: 12, // Normal stock
-    },
-    {
-      id: 6,
-      image: product4,
-      name: "TWILIGHT ZIRCON ANKLET ROSE GOLD",
-      tag: "ROSE GOLD",
-      rating: 0,
-      price: "Rp 120.899,00",
-      oldPrice: "Rp 129.999,00",
-      stock: 8, // Low stock
-    },
-    {
-      id: 7,
-      image: product5,
-      name: "THE CLASSIC SERPENT NECKLACE",
-      tag: "GOLD",
-      rating: 1,
-      price: "Rp 85.499,00",
-      oldPrice: "Rp 89.999,00",
-      stock: 0, // Sold out
-    },
-    {
-      id: 8,
-      image: product6,
-      name: "THE CLASSIC SERPENT NECKLACE",
-      tag: "SILVER",
-      rating: 1,
-      price: "Rp 85.499,00",
-      oldPrice: "Rp 89.999,00",
-      stock: 20, // Normal stock
-    },
-    {
-      id: 9,
-      image: product7,
-      name: "CLASSIC MAGNET LOVE COUPLE BRACELET",
-      tag: "SILVER",
-      rating: 0,
-      price: "Rp 225.990,00",
-      oldPrice: "Rp 269.999,00",
-      stock: 1, // Low stock
-    },
-    {
-      id: 10,
-      image: product1,
-      name: "LUNA PIN CHAIN",
-      tag: "GOLD",
-      rating: 0,
-      price: "Rp 225.990,00",
-      oldPrice: "Rp 269.999,00",
-      stock: 0, // Sold out
-    },
-  ];
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("http://192.168.1.12:8000/api/products/");
+        if (!response.ok) {
+          throw new Error("Failed to fetch products");
+        }
+        const data = await response.json();
+        
+        // Transform and sort products by sold_stok (highest to lowest)
+        const sortedProducts = data
+          .map(product => ({
+            id: product.id,
+            name: product.name,
+            tag: product.label.toUpperCase(),
+            rating: parseFloat(product.rating) || 0,
+            price: `Rp ${parseFloat(product.price).toLocaleString('id-ID')}`,
+            oldPrice: null,
+            image: product.image,
+            stock: product.stock,
+            soldStock: product.sold_stok || 0
+          }))
+          .sort((a, b) => b.soldStock - a.soldStock);
+
+        setProducts(sortedProducts);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const handleProductClick = (productId) => {
     navigate(`/products/${productId}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-[#F9F5EE] px-1 pb-2 md:px-10 md:pb-10 text-center pt-[1rem] md:pt-[8rem] flex justify-center items-center h-64">
+        <p>Loading best sellers...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#F9F5EE] px-1 pb-2 md:px-10 md:pb-10 text-center pt-[1rem] md:pt-[8rem] flex justify-center items-center h-64">
+        <p>Error: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#F9F5EE] px-1 pb-2 md:px-10 md:pb-10 text-center pt-[1rem] md:pt-[8rem]">
@@ -132,7 +79,7 @@ const HomePart3 = () => {
               <img
                 src={product.image}
                 alt={product.name}
-                className={`rounded-lg ${product.stock === 0 ? 'grayscale' : ''}`}
+                className={`rounded-lg w-full h-auto object-cover ${product.stock === 0 ? 'grayscale' : ''}`}
               />
               
               {/* Stock Status Badge */}
@@ -145,6 +92,13 @@ const HomePart3 = () => {
                   LOW STOCK
                 </div>
               ) : null}
+              
+              {/* Best Seller Badge */}
+              {product.soldStock > 0 && (
+                <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded">
+                  BEST SELLER
+                </div>
+              )}
               
               {/* Only show add to cart button if product is in stock */}
               {product.stock > 0 && (
@@ -173,7 +127,7 @@ const HomePart3 = () => {
                     ★
                   </span>
                 ))}
-              <span className="ml-2">({product.rating})</span>
+              <span className="ml-2">({product.rating.toFixed(1)})</span>
             </div>
             <p className="text-gray-500 text-lg open-sans-text">{product.price}</p>
           </div>

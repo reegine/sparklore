@@ -1,5 +1,4 @@
 import React from "react";
-import { Link, NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
@@ -33,7 +32,20 @@ const HomePart1 = () => {
   ];
 
   const handleProductClick = (productId) => {
-    navigate(`/products/${productId}`);
+    // Navigate to the appropriate route based on the product ID
+    switch (productId) {
+      case 1:
+        navigate("/new-arrival");
+        break;
+      case 2:
+        navigate("/giftsets");
+        break;
+      case 3:
+        navigate("/jewel-set");
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -46,10 +58,10 @@ const HomePart1 = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-15 px-[0rem] md:px-[10rem]">
         {productData.map((product, index) => (
-           <Link to="/new-arrival">
           <div 
             key={index} 
             className="relative cursor-pointer"
+            onClick={() => handleProductClick(product.id)} // Call the click handler
           >
             {/* Mobile: Title overlayed on image */}
             <div className="md:hidden relative rounded-xl aspect-[2/1]">
@@ -108,7 +120,6 @@ const HomePart1 = () => {
               <p className="mt-4 text-center text-2xl">{product.title}</p>
             </div>
           </div>
-          </Link>
         ))}
       </div>
     </div>
