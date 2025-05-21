@@ -2,13 +2,13 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu, LogOut } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
-import banner from "../../assets/default/navbar_rings_bg.png";
+import banner from "../../assets/default/navbar_jewelset_bg.png";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
 import { isLoggedIn, logout, getAuthData } from "../../utils/api.js";
 import Snackbar from '../snackbar.jsx';
 
-const NavBar_Rings = () => {
+const NavBar_JewelSet = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCartOpen, setDrawerCartOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -105,7 +105,7 @@ const NavBar_Rings = () => {
     setSnackbarMessage('Successfully logged out');
     setSnackbarType('success');
     setShowSnackbar(true);
-    setShowLogoutConfirm(false); // Close the confirmation dialog
+    setShowLogoutConfirm(false);
     navigate('/');
   };
 
@@ -172,7 +172,7 @@ const NavBar_Rings = () => {
 
   return (
     <div className="shadow-md">
-      {/* Add the logout confirmation popup */}
+      {/* Logout Confirmation Popup */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[999] bg-black/30 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
@@ -314,7 +314,7 @@ const NavBar_Rings = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="RINGS...."
+                    placeholder="NEW ARRIVALS...."
                     className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -369,7 +369,7 @@ const NavBar_Rings = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="RINGS...."
+                    placeholder="NEW ARRIVALS...."
                     className="w-full bg-[#fdfaf3] border-b border-gray-300 text-gray-700 placeholder-gray-400 text-lg tracking-wide px-12 py-3 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -475,7 +475,7 @@ const NavBar_Rings = () => {
                       checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
                       onChange={toggleSelectAll}
                     />
-                    <label className="text-sm font-semibold  text-black">All</label>
+                    <label className="text-sm font-semibold text-black">All</label>
                   </div>
                   <div className="flex gap-4 items-end">
                     <p className="text-lg font-medium">Total</p>
@@ -544,10 +544,10 @@ const NavBar_Rings = () => {
 
           <div className="relative flex flex-col items-center justify-center text-center px-4 mt-10 md:mt-42 text-white">
             <h1 className="text-xl md:text-4xl mb-4 tracking-wider">
-              Symbolize Every Moment
+              Effortless Elegance, Perfectly Paired
             </h1>
             <p className="text-md md:text-3xl max-w-4xl leading-relaxed">
-              Promise, celebrate, or simply shine. Find rings that capture emotions and elevate every occasion.
+              Complete your look with curated jewellery sets, designed to complement any style and occasion.
             </p>
           </div>
         </div>
@@ -627,4 +627,4 @@ const NavBar_Rings = () => {
   );
 };
 
-export default NavBar_Rings;
+export default NavBar_JewelSet;

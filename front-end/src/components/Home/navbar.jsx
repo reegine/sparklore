@@ -1,10 +1,11 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation  } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu, LogOut  } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
 import { isLoggedIn, logout, getAuthData } from "../../utils/api.js";
+import Snackbar from '../snackbar.jsx';
 
 const NavBar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -13,6 +14,10 @@ const NavBar = () => {
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isLoggedInState, setIsLoggedInState] = useState(false);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarType, setSnackbarType] = useState('success');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -35,6 +40,8 @@ const NavBar = () => {
   ]);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearchSubmit = (e) => {
@@ -49,11 +56,24 @@ const NavBar = () => {
     useEffect(() => {
       setIsInitialLoad(false);
 
+      if (location.state?.showLoginSuccess) {
+        setSnackbarMessage('You are logged in');
+        setSnackbarType('success');
+        setShowSnackbar(true);
+        // Clear the state so it doesn't show again on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+
       // Initial check
       const checkAuth = () => {
         const loggedIn = isLoggedIn();
+        if (loggedIn && !isLoggedInState) {
+          // Just logged in
+          // setSnackbarMessage('You are logged in');
+          // setSnackbarType('success');
+          // setShowSnackbar(true);
+        }
         setIsLoggedInState(loggedIn);
-        console.log('Auth check:', loggedIn, getAuthData());
       };
 
       checkAuth();
@@ -70,7 +90,7 @@ const NavBar = () => {
       return () => {
         window.removeEventListener('storage', handleStorageChange);
       };
-    }, []);
+    }, [location.state]);
 
   const handleCartClick = () => {
     if (!isLoggedInState) {
@@ -80,14 +100,19 @@ const NavBar = () => {
     }
   };
 
-    const handleLogout = () => {
+  const handleLogout = () => {
     logout();
-    setIsLoggedInState(false); // Update local state
+    setIsLoggedInState(false);
+    setSnackbarMessage('Successfully logged out');
+    setSnackbarType('success');
+    setShowSnackbar(true);
+    setShowLogoutConfirm(false); // Close the confirmation dialog
     navigate('/');
   };
 
   const navItems = [
     { name: "Charm Bar", path: "/charmbar" },
+    { name: "Charms", path: "/charms" },
     { name: "Necklaces", path: "/necklaces" },
     { name: "Bracelets", path: "/bracelets" },
     { name: "Earrings", path: "/earrings" },
@@ -150,6 +175,39 @@ const NavBar = () => {
 
   return (
     <div className="bg-[#fdfaf3] shadow-md">
+      {/* Add the logout confirmation popup */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[999] bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Logout</h3>
+              <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Snackbar 
+        message={snackbarMessage}
+        show={showSnackbar}
+        onClose={() => setShowSnackbar(false)}
+        type={snackbarType}
+      />
+
       {/* Desktop Layout */}
       <div className="hidden md:block">
          <nav className="px-[9rem] pb-[2rem] pt-[1rem] flex items-center justify-between">
@@ -174,7 +232,7 @@ const NavBar = () => {
             {isLoggedInState ? (
               <LogOut 
                 className="w-5 h-5 cursor-pointer hover:text-[#b87777]" 
-                onClick={handleLogout}
+                onClick={() => setShowLogoutConfirm(true)}
                 title="Logout"
               />
             ) : (
@@ -358,16 +416,16 @@ const NavBar = () => {
             <div className="flex items-center gap-4">
               <Search className="w-5 h-5 cursor-pointer" onClick={() => setShowSearchBar(!showSearchBar)} />
               {isLoggedInState ? (
-              <LogOut 
-                className="w-5 h-5 cursor-pointer hover:text-[#b87777]" 
-                onClick={handleLogout}
-                title="Logout"
-              />
-            ) : (
-              <Link to="/login">
-                <User className="w-5 h-5 cursor-pointer hover:text-[#b87777]" />
-              </Link>
-            )}
+                <LogOut 
+                  className="w-5 h-5 cursor-pointer hover:text-[#b87777]" 
+                  onClick={() => setShowLogoutConfirm(true)}
+                  title="Logout"
+                />
+              ) : (
+                <Link to="/login">
+                  <User className="w-5 h-5 cursor-pointer hover:text-[#b87777]" />
+                </Link>
+              )}
               <ShoppingBag 
                 className="w-5 h-5 cursor-pointer" 
                 onClick={handleCartClick} 
@@ -469,7 +527,16 @@ const NavBar = () => {
           </div>
         )}
 
+      
+
       <style jsx>{`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out;
+          }
           /* Custom checkbox styling */
           input[type="checkbox"] {
             -webkit-appearance: none;

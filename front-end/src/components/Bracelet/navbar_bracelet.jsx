@@ -1,16 +1,24 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Search, User, ShoppingBag, Menu } from "lucide-react";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Search, User, ShoppingBag, Menu, LogOut } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
 import banner from "../../assets/default/navbar_bracelet_bg.png";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
+import { isLoggedIn, logout } from "../../utils/api.js";
+import Snackbar from '../snackbar.jsx';
 
 const NavBar_Bracelet = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCartOpen, setDrawerCartOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showSearchBar, setShowSearchBar] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isLoggedInState, setIsLoggedInState] = useState(false);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarType, setSnackbarType] = useState('success');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -33,6 +41,7 @@ const NavBar_Bracelet = () => {
   ]);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearchSubmit = (e) => {
@@ -45,6 +54,7 @@ const NavBar_Bracelet = () => {
 
   const navItems = [
     { name: "Charm Bar", path: "/charmbar" },
+    { name: "Charms", path: "/charms" },
     { name: "Necklaces", path: "/necklaces" },
     { name: "Bracelets", path: "/bracelets" },
     { name: "Earrings", path: "/earrings" },
@@ -55,7 +65,51 @@ const NavBar_Bracelet = () => {
 
   useEffect(() => {
     setIsInitialLoad(false);
-  }, []);
+
+    if (location.state?.showLoginSuccess) {
+      setSnackbarMessage('Successfully logged in');
+      setSnackbarType('success');
+      setShowSnackbar(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+
+    const checkAuth = () => {
+      const loggedIn = isLoggedIn();
+      setIsLoggedInState(loggedIn);
+    };
+
+    checkAuth();
+    
+    const handleStorageChange = (e) => {
+      if (e.key === 'authData') {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [location.state]);
+
+  const handleCartClick = () => {
+    if (!isLoggedInState) {
+      setShowLoginPrompt(true);
+    } else {
+      setDrawerCartOpen(true);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsLoggedInState(false);
+    setSnackbarMessage('Successfully logged out');
+    setSnackbarType('success');
+    setShowSnackbar(true);
+    setShowLogoutConfirm(false);
+    navigate('/');
+  };
 
   const handleQuantityChange = (id, change) => {
     setCartItems(prevItems =>
@@ -109,6 +163,68 @@ const NavBar_Bracelet = () => {
 
   return (
     <div className="shadow-md">
+      {/* Logout Confirmation Popup */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[999] bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Logout</h3>
+              <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Prompt Popup */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-[999] bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Login Required</h3>
+              <p className="text-gray-600 mb-6">
+                You need to be logged in to access your shopping cart.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                  onClick={() => setShowLoginPrompt(false)}
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Snackbar 
+        message={snackbarMessage}
+        show={showSnackbar}
+        onClose={() => setShowSnackbar(false)}
+        type={snackbarType}
+      />
+
       <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -138,12 +254,20 @@ const NavBar_Bracelet = () => {
                   className="w-5 h-5 cursor-pointer" 
                   onClick={() => setShowSearchBar(!showSearchBar)} 
                 />
-                <Link to="/login">
-                  <User className="w-5 h-5 cursor-pointer" />
-                </Link>
+                {isLoggedInState ? (
+                  <LogOut 
+                    className="w-5 h-5 cursor-pointer hover:text-[#b87777]" 
+                    onClick={() => setShowLogoutConfirm(true)}
+                    title="Logout"
+                  />
+                ) : (
+                  <Link to="/login">
+                    <User className="w-5 h-5 cursor-pointer hover:text-[#b87777]" />
+                  </Link>
+                )}
                 <ShoppingBag 
                   className="w-5 h-5 cursor-pointer" 
-                  onClick={() => setDrawerCartOpen(true)} 
+                  onClick={handleCartClick} 
                 />
               </div>
             </nav>
@@ -199,12 +323,20 @@ const NavBar_Bracelet = () => {
                   className="w-5 h-5 cursor-pointer" 
                   onClick={() => setShowSearchBar(!showSearchBar)} 
                 />
-                <Link to="/login">
-                  <User className="w-5 h-5 cursor-pointer" />
-                </Link>
+                {isLoggedInState ? (
+                  <LogOut 
+                    className="w-5 h-5 cursor-pointer hover:text-[#b87777]" 
+                    onClick={() => setShowLogoutConfirm(true)}
+                    title="Logout"
+                  />
+                ) : (
+                  <Link to="/login">
+                    <User className="w-5 h-5 cursor-pointer hover:text-[#b87777]" />
+                  </Link>
+                )}
                 <ShoppingBag 
                   className="w-5 h-5 cursor-pointer" 
-                  onClick={() => setDrawerCartOpen(true)} 
+                  onClick={handleCartClick} 
                 />
                 <Menu 
                   className="w-6 h-6 cursor-pointer" 

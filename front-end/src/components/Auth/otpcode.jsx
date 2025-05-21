@@ -9,6 +9,7 @@ const CodeVerificationPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email;
+  const [showSnackbar, setShowSnackbar] = useState(false);
 
   useEffect(() => {
     const countdown = setInterval(() => {
@@ -31,8 +32,15 @@ const CodeVerificationPage = () => {
     if (fullCode.length === 4) {
       try {
         const result = await verifyOTP(email, fullCode);
-        // Token is automatically stored by the verifyOTP function
-        navigate("/"); // Redirect to home or wherever appropriate
+        // Store in location state to trigger snackbar in NavBar
+        navigate("/", { state: { showLoginSuccess: true } });
+        if (location.state?.showLoginSuccess) {
+        setSnackbarMessage('You are logged in');
+        setSnackbarType('success');
+        setShowSnackbar(true);
+        // Clear the state so it doesn't show again on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
       } catch (err) {
         setError(err.message);
       }
