@@ -1,4 +1,6 @@
+import os
 from django.db import models
+from django.utils.text import slugify
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
@@ -36,12 +38,14 @@ class Product(models.Model):
         ('ring', 'Ring'),
         ('anklet', 'Anklet'),
         ('gift_set', 'Gift Set'),
+        ('charm', 'Charm'),
     ]
 
     LABEL_CHOICES = [
         ('gold', 'Gold'),
         ('silver', 'Silver'),
         ('rose_gold', 'Rose Gold'),
+        ('null', 'Null'),
     ]
 
     name = models.CharField(max_length=100)
@@ -49,12 +53,12 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     charms = models.ManyToManyField(Charm, blank=True)
     label = models.CharField(max_length=100, choices=LABEL_CHOICES)
-    image = models.ImageField(upload_to='products/')
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     description = models.TextField(blank=True, null=True)
     stock = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     sold_stok = models.IntegerField(default=0)
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     # Produk di dalam gift set
     gift_set_products = models.ManyToManyField('self', blank=True, symmetrical=False)
@@ -68,6 +72,16 @@ class Product(models.Model):
         if self.stock < 0:
             raise ValidationError("Stok tidak boleh negatif.")
 
+def product_image_upload_path(instance, filename):
+    return f"products/{instance.product.id}/{filename}"
+
+class ProductImage(models.Model):
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to=product_image_upload_path)
+    alt_text = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Gambar untuk {self.product.name}"
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -106,7 +120,7 @@ class Cart(models.Model):
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, blank=True, null=True)
     quantity = models.PositiveIntegerField(default=1)
     charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
 

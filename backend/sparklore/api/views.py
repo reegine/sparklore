@@ -84,6 +84,43 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
     serializer_class = NewsletterSubscriberSerializer
     permission_classes = [AllowAny]
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def checkout(request):
+    cart = Cart.objects.prefetch_related('items__product', 'items__charms').filter(user=request.user).first()
+    if not cart or not cart.items.exists():
+        return Response({'error': 'Keranjang kosong.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        total_price = 0
+        for item in cart.items.all():
+            # Validasi stok produk
+            if item.quantity > item.product.stock:
+                return Response({'error': f"Stok tidak cukup untuk produk {item.product.name}"}, status=400)
+
+            item_total = item.product.price * item.quantity if item.product else 0
+            charm_total = sum([charm.price for charm in item.charms.all()]) * item.quantity
+            total_price += item_total + charm_total
+
+            # Kurangi stok produk
+            item.product.stock -= item.quantity
+            item.product.sold_stok += item.quantity
+            item.product.save()
+
+        order = Order.objects.create(
+            user=request.user,
+            total_price=total_price,
+            status='pending',
+            shipping_address=request.data.get('shipping_address', '-'),
+            shipping_cost=request.data.get('shipping_cost', 0),
+        )
+        order.products.set([item.product for item in cart.items.all()])
+        
+        # Hapus isi keranjang
+        cart.items.all().delete()
+
+    return Response({'message': 'Checkout berhasil', 'order_id': order.id}, status=201)
+
 # @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 # def checkout(request):

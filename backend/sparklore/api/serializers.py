@@ -64,6 +64,12 @@ class ProductSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Field gift_set_products hanya boleh diisi untuk kategori 'gift_set'.")
             
         return data
+    
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            return request.build_absolute_uri(obj.image.url)
+        return None
 
 class ReviewSerializer(serializers.ModelSerializer):
     products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all())
@@ -91,10 +97,18 @@ class CartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem; fields = ['id','product','quantity','charms']
 
-    def validate_charms(self, value):
-        if len(value) > 5:
-            raise serializers.ValidationError('Max 5 charms per item')
-        return value
+    def validate(self, data):
+        product = data.get('product')
+        charms = data.get('charms', [])
+
+        if len(charms) > 5:
+            raise serializers.ValidationError('Max 5 charms per item.')
+
+        if product:
+            if product.category not in ['necklace', 'bracelet'] and charms:
+                raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
+        
+        return data
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True)
