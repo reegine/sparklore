@@ -24,6 +24,9 @@ import TrackingOrder from './pages/tracking_order.jsx'
 import NewArrival from './pages/new_arrival.jsx'
 import Search from './pages/search.jsx'
 import JewelSet from './pages/jewelset.jsx'
+import ForUs from './pages/for_us.jsx'
+import ForHim from './pages/for_him.jsx'
+import ForHer from './pages/for_her.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -45,6 +48,10 @@ const router = createBrowserRouter([
   {path:"/new-arrival", element: <NewArrival />},
   {path:"/jewel-set", element: <JewelSet />},
   {path:"/search", element: <Search />},
+  {path:"/for-us", element: <ForUs />},
+  {path:"/for-him", element: <ForHim />},
+  {path:"/for-her", element: <ForHer />},
+
 
 
 
