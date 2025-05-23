@@ -48,7 +48,7 @@ class Product(models.Model):
         ('null', 'Null'),
     ]
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=300)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     charms = models.ManyToManyField(Charm, blank=True)
@@ -118,12 +118,41 @@ class Cart(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.email} - Cart"
+    
+    def clean(self):
+        if not self.user.is_authenticated:
+            raise ValidationError("User harus terautentikasi untuk membuat keranjang belanja.")
+        if Cart.objects.filter(user=self.user).exists():
+            raise ValidationError("User sudah memiliki keranjang belanja yang aktif.")
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, blank=True, null=True)
     quantity = models.PositiveIntegerField(default=1)
     charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
 
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity} pcs in {self.cart.user.email}'s cart"
+    
+    def clean(self):
+        if self.quantity <= 0:
+            raise ValidationError("Jumlah item harus lebih dari 0.")
+        if self.product and self.product.stock < self.quantity:
+            raise ValidationError("Stok tidak cukup untuk produk ini.")
+        if self.cart.user != self.cart.user:
+            raise ValidationError("Item keranjang tidak sesuai dengan pengguna keranjang.")
+
 class CartItemCharm(models.Model):
     item = models.ForeignKey(CartItem, on_delete=models.CASCADE)
     charm = models.ForeignKey(Charm, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.charm.name} - {self.item.product.name} in {self.item.cart.user.email}'s cart"
+    
+    def clean(self):
+        if self.item.cart.user != self.item.cart.user:
+            raise ValidationError("Charm tidak sesuai dengan pengguna keranjang.")
+        if self.charm not in self.item.charms.all():
+            raise ValidationError("Charm tidak ada dalam item keranjang ini.")
