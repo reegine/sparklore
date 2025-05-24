@@ -21,13 +21,20 @@ class Charm(models.Model):
     category = models.CharField(max_length=50, choices=CHARM_CATEGORY_CHOICES)
     image = models.ImageField(upload_to='charms/')
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    description = models.TextField(blank=True, null=True)
+    stock = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    sold_stok = models.IntegerField(default=0)
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.name} ({self.category})"
-    
+        
     def clean(self):
-        if self.price < 0:
+        if self.price is not None and self.price < 0:
             raise ValidationError("Harga charms tidak boleh negatif.")
+
 
 
 class Product(models.Model):
@@ -51,7 +58,6 @@ class Product(models.Model):
     name = models.CharField(max_length=300)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    charms = models.ManyToManyField(Charm, blank=True)
     label = models.CharField(max_length=100, choices=LABEL_CHOICES)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     description = models.TextField(blank=True, null=True)
@@ -141,8 +147,6 @@ class CartItem(models.Model):
             raise ValidationError("Jumlah item harus lebih dari 0.")
         if self.product and self.product.stock < self.quantity:
             raise ValidationError("Stok tidak cukup untuk produk ini.")
-        if self.cart.user != self.cart.user:
-            raise ValidationError("Item keranjang tidak sesuai dengan pengguna keranjang.")
 
 class CartItemCharm(models.Model):
     item = models.ForeignKey(CartItem, on_delete=models.CASCADE)
@@ -151,8 +155,12 @@ class CartItemCharm(models.Model):
     def __str__(self):
         return f"{self.charm.name} - {self.item.product.name} in {self.item.cart.user.email}'s cart"
     
-    def clean(self):
-        if self.item.cart.user != self.item.cart.user:
-            raise ValidationError("Charm tidak sesuai dengan pengguna keranjang.")
-        if self.charm not in self.item.charms.all():
-            raise ValidationError("Charm tidak ada dalam item keranjang ini.")
+        
+class VideoContent(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    video_file = models.FileField(upload_to='videos/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

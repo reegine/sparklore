@@ -3,12 +3,12 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Charm, NewsletterSubscriber, Review, Product, Cart, CartItem, Order #Payment
+from .models import Charm, NewsletterSubscriber, Review, Product, Cart, CartItem, Order, VideoContent #Payment
 from .serializers import (
     CharmSerializer, ProductSerializer,
     CartSerializer, CartItemSerializer,
     OrderSerializer, NewsletterSubscriberSerializer,
-    ReviewSerializer #PaymentSerializer
+    ReviewSerializer, VideoContentSerializer #PaymentSerializer
 )
 # from .services import MidtransService, RajaOngkirService
 from django.db import transaction
@@ -146,3 +146,8 @@ def checkout(request):
 #         )
 #         cart.items.all().delete()
 #     return Response({'order_id':order.id, 'midtrans':mid})
+
+class VideoContentViewSet(viewsets.ModelViewSet):
+    queryset = VideoContent.objects.all()
+    serializer_class = VideoContentSerializer
+    permission_classes = [AllowAny]
