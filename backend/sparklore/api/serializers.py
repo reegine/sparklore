@@ -1,7 +1,9 @@
 from rest_framework import serializers
-from .models import Charm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm
+from .models import Charm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent
 
 class NewsletterSubscriberSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+
     class Meta:
         model = NewsletterSubscriber
         fields = '__all__'
@@ -31,27 +33,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    charms = serializers.PrimaryKeyRelatedField(many=True, queryset=Charm.objects.all(), required=False)
-    charms_detail = CharmSerializer(many=True, source="charms", read_only=True)
     gift_set_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
 
     class Meta:
         model = Product
         fields = '__all__'
 
-    def validate_charms(self, value):
-        if len(value) > 5:
-            raise serializers.ValidationError("Maksimal hanya bisa memilih 5 charms per produk.")
-        return value
-
     def validate(self, data):
         category = data.get('category', None)
         charms = data.get('charms', [])
         gift_set_products = data.get('gift_set_products', [])
-
-        # VALIDASI CHARMS
-        if category not in ['necklace', 'bracelet'] and charms:
-            raise serializers.ValidationError("Charms hanya diperbolehkan untuk produk berjenis 'necklace' atau 'bracelet'.")
 
         if category == 'gift_set':
             if not gift_set_products:
@@ -107,9 +98,13 @@ class CartItemSerializer(serializers.ModelSerializer):
         if product:
             if product.category not in ['necklace', 'bracelet'] and charms:
                 raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
-        
         return data
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True)
     class Meta: model = Cart; fields = ['id','items']
+
+class VideoContentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VideoContent
+        fields = '__all__'
