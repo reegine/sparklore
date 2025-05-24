@@ -1,10 +1,10 @@
-import { Link, NavLink, useNavigate, useLocation  } from "react-router-dom";
-import { Search, User, ShoppingBag, Menu, LogOut  } from "lucide-react";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Search, User, ShoppingBag, Menu, LogOut } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
-import { isLoggedIn, logout, getAuthData } from "../../utils/api.js";
+import { isLoggedIn, logout, getAuthData, fetchCart, fetchProduct, fetchCharm, updateCartItemQuantity, deleteCartItem } from "../../utils/api.js";
 import Snackbar from '../snackbar.jsx';
 
 const NavBar = () => {
@@ -38,11 +38,77 @@ const NavBar = () => {
       image: product2
     }
   ]);
+  const [isLoadingCart, setIsLoadingCart] = useState(false);
+  const [cartError, setCartError] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Load cart data when drawer opens and user is logged in
+  useEffect(() => {
+    const loadCartData = async () => {
+      if (drawerCartOpen && isLoggedInState) {
+        try {
+          setIsLoadingCart(true);
+          setCartError(null);
+          
+          // First keep the existing cart items as fallback
+          const existingCartItems = [...cartItems];
+          
+          try {
+            const cartData = await fetchCart();
+            
+            // Fetch product details for each item in cart
+            const itemsWithDetails = await Promise.all(
+              cartData.items.map(async (item) => {
+                const product = await fetchProduct(item.product);
+                const charmDetails = item.charms && item.charms.length > 0 
+                  ? await Promise.all(item.charms.map(charmId => fetchCharm(charmId)))
+                  : [];
+                
+                // Calculate prices with discount
+                const originalPrice = parseFloat(product.price);
+                const discount = parseFloat(product.discount || 0);
+                const discountedPrice = discount > 0 
+                  ? originalPrice * (1 - (discount / 100))
+                  : originalPrice;
+
+                return {
+                  id: item.id,
+                  productId: item.product,
+                  name: product.name,
+                  price: discountedPrice, // This is the discounted price
+                  originalPrice: discount > 0 ? originalPrice : null, // Only show if discounted
+                  discount: discount,
+                  quantity: item.quantity,
+                  selected: false,
+                  image: product.image || product1,
+                  charms: charmDetails.map(charm => charm.image),
+                  message: item.message || ""
+                };
+              })
+            );
+            
+            setCartItems(itemsWithDetails);
+          } catch (error) {
+            console.error("Error loading cart from API:", error);
+            setCartError("Couldn't load cart data. Displaying cached items.");
+            // Keep the existing cart items if API fails
+            setCartItems(existingCartItems);
+          }
+        } catch (error) {
+          console.error("Error loading cart:", error);
+          setCartError(error.message);
+        } finally {
+          setIsLoadingCart(false);
+        }
+      }
+    };
+
+    loadCartData();
+  }, [drawerCartOpen, isLoggedInState]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -52,45 +118,45 @@ const NavBar = () => {
     }
   };
 
-   // Add this useEffect to listen for storage changes
-    useEffect(() => {
-      setIsInitialLoad(false);
+  // Add this useEffect to listen for storage changes
+  useEffect(() => {
+    setIsInitialLoad(false);
 
-      if (location.state?.showLoginSuccess) {
-        setSnackbarMessage('You are logged in');
-        setSnackbarType('success');
-        setShowSnackbar(true);
-        // Clear the state so it doesn't show again on refresh
-        navigate(location.pathname, { replace: true, state: {} });
+    if (location.state?.showLoginSuccess) {
+      setSnackbarMessage('You are logged in');
+      setSnackbarType('success');
+      setShowSnackbar(true);
+      // Clear the state so it doesn't show again on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+
+    // Initial check
+    const checkAuth = () => {
+      const loggedIn = isLoggedIn();
+      if (loggedIn && !isLoggedInState) {
+        // Just logged in
+        // setSnackbarMessage('You are logged in');
+        // setSnackbarType('success');
+        // setShowSnackbar(true);
       }
+      setIsLoggedInState(loggedIn);
+    };
 
-      // Initial check
-      const checkAuth = () => {
-        const loggedIn = isLoggedIn();
-        if (loggedIn && !isLoggedInState) {
-          // Just logged in
-          // setSnackbarMessage('You are logged in');
-          // setSnackbarType('success');
-          // setShowSnackbar(true);
-        }
-        setIsLoggedInState(loggedIn);
-      };
+    checkAuth();
+    
+    // Listen for storage changes
+    const handleStorageChange = (e) => {
+      if (e.key === 'authData') {
+        checkAuth();
+      }
+    };
 
-      checkAuth();
-      
-      // Listen for storage changes
-      const handleStorageChange = (e) => {
-        if (e.key === 'authData') {
-          checkAuth();
-        }
-      };
-
-      window.addEventListener('storage', handleStorageChange);
-      
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    }, [location.state]);
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [location.state]);
 
   const handleCartClick = () => {
     if (!isLoggedInState) {
@@ -121,18 +187,110 @@ const NavBar = () => {
     { name: "Gift Sets", path: "/giftsets" },
   ];
 
-     const handleQuantityChange = (id, change) => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+const [itemToDelete, setItemToDelete] = useState(null);
+
+const handleQuantityChange = async (id, change) => {
+  const item = cartItems.find(item => item.id === id);
+  if (!item) return;
+
+  const newQuantity = item.quantity + change;
+
+  // Prevent negative quantities
+  if (newQuantity < 0) return;
+
+  // Handle quantity 0 (delete item)
+  if (newQuantity === 0) {
+    setItemToDelete(id);
+    setShowDeleteConfirm(true);
+    return;
+  }
+
+  try {
+    // Optimistically update the UI
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === id
-          ? {
-              ...item,
-              quantity: Math.max(1, item.quantity + change)
-            }
+          ? { ...item, quantity: newQuantity }
           : item
       )
     );
-  };
+
+    // Update quantity on server
+    await updateCartItemQuantity(id, newQuantity);
+
+    // Refresh cart data to ensure sync
+    const updatedCart = await fetchCart();
+    const itemsWithDetails = await Promise.all(
+      updatedCart.items.map(async (item) => {
+        const product = await fetchProduct(item.product);
+        const charmDetails = item.charms && item.charms.length > 0 
+          ? await Promise.all(item.charms.map(charmId => fetchCharm(charmId)))
+          : [];
+        
+        // Calculate prices with discount
+        const originalPrice = parseFloat(product.price);
+        const discount = parseFloat(product.discount || 0);
+        const discountedPrice = discount > 0 
+          ? originalPrice * (1 - (discount / 100))
+          : originalPrice;
+
+        return {
+          id: item.id,
+          productId: item.product,
+          name: product.name,
+          price: discountedPrice, // This is the discounted price
+          originalPrice: discount > 0 ? originalPrice : null, // Only show if discounted
+          discount: discount,
+          quantity: item.quantity,
+          selected: item.selected || false,
+          image: product.image || product1,
+          charms: charmDetails.map(charm => charm.image),
+          message: item.message || ""
+        };
+      })
+    );
+    setCartItems(itemsWithDetails);
+
+  } catch (error) {
+    console.error("Error updating quantity:", error);
+    // Revert UI if update fails
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id
+          ? { ...item, quantity: item.quantity - change }
+          : item
+      )
+    );
+    setSnackbarMessage('Failed to update quantity');
+    setSnackbarType('error');
+    setShowSnackbar(true);
+  }
+};
+
+const handleConfirmDelete = async () => {
+  if (!itemToDelete) return;
+
+  try {
+    // Delete from server
+    await deleteCartItem(itemToDelete);
+    
+    // Update UI
+    setCartItems(prevItems => prevItems.filter(item => item.id !== itemToDelete));
+    
+    setSnackbarMessage('Item removed from cart');
+    setSnackbarType('success');
+    setShowSnackbar(true);
+  } catch (error) {
+    console.error("Error deleting item:", error);
+    setSnackbarMessage('Failed to remove item');
+    setSnackbarType('error');
+    setShowSnackbar(true);
+  } finally {
+    setShowDeleteConfirm(false);
+    setItemToDelete(null);
+  }
+};
 
   const toggleItemSelection = (id) => {
     setCartItems(prevItems =>
@@ -170,6 +328,7 @@ const NavBar = () => {
       minimumFractionDigits: 0
     }).format(price).replace('IDR', 'Rp.');
   };
+
 
 
 
@@ -290,10 +449,10 @@ const NavBar = () => {
 
       </div>
 
-      {/* Shopping Cart Drawer */}
+      {/* Shopping Cart Drawer - Updated Section */}
       {drawerCartOpen && (
         <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
-          <div className="bg-[#fdfaf3] sm:w-full md:w-[60%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
+          <div className="bg-[#fdfaf3] sm:w-full md:w-[40%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
             {/* Header */}
             <div className="flex justify-between items-center border-b pb-4 mb-4">
               <h2 className="text-xl font-semibold tracking-widest text-gray-800">YOUR CART</h2>
@@ -304,6 +463,19 @@ const NavBar = () => {
                 ✕
               </button>
             </div>
+
+            {/* Loading and Error States */}
+            {isLoadingCart && (
+              <div className="flex justify-center items-center h-32">
+                <p>Loading your cart...</p>
+              </div>
+            )}
+            
+            {cartError && (
+              <div className="text-red-500 p-4 text-center">
+                {cartError}
+              </div>
+            )}
 
             {/* Cart Items */}
             <div className="space-y-8">
@@ -324,11 +496,27 @@ const NavBar = () => {
                     <div className="flex-1">
                       <div className="flex justify-between">
                         <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                        <button className="text-sm text-gray-600">Edit</button>
+                        {/* <button className="text-sm text-gray-600">Edit</button> */}
                       </div>
-                      <p className="text-[#b87777] font-semibold">{formatPrice(item.price)}</p>
+
+                       <div className="flex flex-col">
+                        {/* Display discounted price and original price if discounted */}
+                        <p className="text-[#b87777] font-semibold">
+                          {formatPrice(item.price * item.quantity)} {/* Total price for quantity */}
+                        </p>
+                        {item.originalPrice && (
+                          <div className="flex gap-2">
+                            <p className="text-gray-400 text-sm line-through">
+                              {formatPrice(item.originalPrice * item.quantity)}
+                            </p>
+                            <span className="text-xs bg-[#c3a46f] text-white px-1 rounded">
+                              {item.discount}% OFF
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       
-                      {item.charms && (
+                      {item.charms && item.charms.length > 0 && (
                         <div className="text-sm mt-2">
                           <p className="font-medium">Charm Selection</p>
                           <div className="flex gap-1 mt-1">
@@ -372,37 +560,48 @@ const NavBar = () => {
               ))}
             </div>
 
-            {/* Bottom Section */}
-            <div className="flex items-center justify-between mt-10 pt-6 border-t">
-              <div className="flex gap-2 items-center">
-                <input 
-                  type="checkbox" 
-                  className="custom-checkbox" 
-                  checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
-                  onChange={toggleSelectAll}
-                />
-                <label className="text-sm font-semibold">All</label>
-              </div>
-              <div className="flex gap-4 items-end">
-                <p className="text-lg font-medium">Total</p>
-                <p className="text-lg font-bold text-[#b87777]">
-                  {formatPrice(calculateTotal())}
-                </p>
-              </div>
-            </div>
+            {/* Bottom Section - Only show if cart has items */}
+            {cartItems.length > 0 && (
+              <>
+                <div className="flex items-center justify-between mt-10 pt-6 border-t">
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="checkbox" 
+                      className="custom-checkbox" 
+                      checked={cartItems.length > 0 && cartItems.every(item => item.selected)}
+                      onChange={toggleSelectAll}
+                    />
+                    <label className="text-sm font-semibold">All</label>
+                  </div>
+                  <div className="flex gap-4 items-end">
+                    <p className="text-lg font-medium">Total</p>
+                    <p className="text-lg font-bold text-[#b87777]">
+                      {formatPrice(calculateTotal())}
+                    </p>
+                  </div>
+                </div>
 
-            {/* Buttons */}
-            <div className="mt-6 space-y-4">
-              <Link 
-                to="/checkout" 
-                className="w-full bg-[#e9d8a6] text-gray-800 font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition block text-center"
-              >
-                Checkout
-              </Link>
-              <button className="w-full bg-[#e4572e] text-white font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition">
-                Shopee Checkout
-              </button>
-            </div>
+                {/* Buttons */}
+                <div className="mt-6 space-y-4">
+                  <Link 
+                    to="/checkout" 
+                    className="w-full bg-[#e9d8a6] text-gray-800 font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition block text-center"
+                  >
+                    Checkout
+                  </Link>
+                  <button className="w-full bg-[#e4572e] text-white font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition">
+                    Shopee Checkout
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Empty cart state */}
+            {!isLoadingCart && cartItems.length === 0 && !cartError && (
+              <div className="text-center py-10">
+                <p>Your cart is empty</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -527,7 +726,34 @@ const NavBar = () => {
           </div>
         )}
 
-      
+      {/* Delete Confirmation Popup */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[999] bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Remove Item</h3>
+              <p className="text-gray-600 mb-6">Are you sure you want to remove this item from your cart?</p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setItemToDelete(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
           @keyframes fadeIn {

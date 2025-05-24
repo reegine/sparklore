@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { isLoggedIn, addToCart } from "../../utils/api";
+import Snackbar from '../snackbar.jsx';
 
 const HomePart3 = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarType, setSnackbarType] = useState('success');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   // Fetch products from API
   useEffect(() => {
@@ -46,6 +52,27 @@ const HomePart3 = () => {
 
   const handleProductClick = (productId) => {
     navigate(`/products/${productId}`);
+  };
+
+  const handleAddToCart = async (productId, e) => {
+    e.stopPropagation();
+    
+    if (!isLoggedIn()) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    try {
+      await addToCart(productId);
+      setSnackbarMessage('Item added to cart!');
+      setSnackbarType('success');
+      setShowSnackbar(true);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      setSnackbarMessage(error.message || 'Failed to add to cart');
+      setSnackbarType('error');
+      setShowSnackbar(true);
+    }
   };
 
   if (isLoading) {
@@ -105,10 +132,7 @@ const HomePart3 = () => {
                 <div className="absolute bottom-2 right-2 bg-[#faf7f0] p-2 rounded-sm shadow">
                   <button 
                     className="p-2 rounded-full border-2 border-[#e8d6a8] bg-[#faf7f0]"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Add to cart logic here
-                    }}
+                    onClick={(e) => handleAddToCart(product.id, e)}
                   >
                     <Plus size={12} color="#e8d6a8" />
                   </button>
@@ -133,6 +157,43 @@ const HomePart3 = () => {
           </div>
         ))}
       </div>
+
+      {/* Snackbar for notifications */}
+      <Snackbar 
+        message={snackbarMessage}
+        show={showSnackbar}
+        onClose={() => setShowSnackbar(false)}
+        type={snackbarType}
+      />
+
+      {/* Login Prompt Popup */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Login Required</h3>
+              <p className="text-gray-600 mb-6">
+                You need to be logged in to add items to your cart.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                  onClick={() => setShowLoginPrompt(false)}
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

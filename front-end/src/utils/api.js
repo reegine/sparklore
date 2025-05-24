@@ -88,3 +88,231 @@ export const verifyOTP = async (email, code) => {
 export const logout = () => {
   localStorage.removeItem('authData');
 };
+
+
+
+export const fetchCart = async () => {
+  const authData = getAuthData();
+  if (!authData) throw new Error('Not authenticated');
+
+  const response = await fetch(`${BASE_URL}/api/cart/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authData.token}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch cart');
+  }
+
+  return await response.json();
+};
+
+export const fetchProduct = async (productId) => {
+  const response = await fetch(`${BASE_URL}/api/products/${productId}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch product');
+  }
+
+  const product = await response.json();
+  return {
+    ...product,
+    price: parseFloat(product.price),
+    discount: parseFloat(product.discount || 0) // Default to 0 if no discount
+  };
+};
+
+export const fetchCharm = async (charmId) => {
+  const response = await fetch(`${BASE_URL}/api/charms/${charmId}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch charm');
+  }
+
+  return await response.json();
+};
+
+
+// Modified updateCartItemQuantity to support increment/decrement
+export const updateCartItemQuantity = async (itemId, quantity, increment = false) => {
+  const authData = getAuthData();
+  if (!authData) throw new Error('Not authenticated');
+
+  let requestBody = { quantity };
+  
+  if (increment) {
+    // First get current quantity
+    const cartResponse = await fetch(`${BASE_URL}/api/cart/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authData.token}`
+      }
+    });
+    
+    if (!cartResponse.ok) {
+      throw new Error('Failed to fetch cart');
+    }
+    
+    const cartData = await cartResponse.json();
+    const cartItems = cartData.items || [];
+    const item = cartItems.find(i => i.id === itemId);
+    
+    if (!item) {
+      throw new Error('Item not found in cart');
+    }
+    
+    requestBody = { quantity: item.quantity + quantity };
+  }
+
+  const response = await fetch(`${BASE_URL}/api/cart/${itemId}/update_item/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authData.token}`
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update cart item quantity');
+  }
+
+  const updatedItem = await response.json();
+  
+  // Always fetch the full product details to ensure we have discount info
+  const productId = typeof updatedItem.product === 'object' 
+    ? updatedItem.product.id 
+    : updatedItem.product;
+  
+  if (productId) {
+    const product = await fetchProduct(productId);
+    return {
+      ...updatedItem,
+      product: {
+        ...(typeof updatedItem.product === 'object' ? updatedItem.product : {}),
+        id: productId,
+        price: product.price,
+        discount: product.discount
+      },
+      // Calculate and include discounted price
+      discountedPrice: product.discount > 0 
+        ? product.price * (1 - (product.discount / 100))
+        : product.price
+    };
+  }
+
+  return updatedItem;
+};
+
+export const deleteCartItem = async (itemId) => {
+  const authData = getAuthData();
+  if (!authData) throw new Error('Not authenticated');
+
+  const response = await fetch(`${BASE_URL}/api/cart/${itemId}/remove/`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${authData.token}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete cart item');
+  }
+
+  return await response.json();
+};
+
+
+// Add to api.js
+export const addToCart = async (productId) => {
+  const authData = getAuthData();
+  if (!authData) throw new Error('Not authenticated');
+
+  try {
+    // First check if product already exists in cart
+    console.log('Checking if product exists in cart...'); // Debug
+    const existingItemId = await checkProductInCart(productId);
+    console.log('Existing item ID:', existingItemId); // Debug
+
+    if (existingItemId) {
+      console.log('Product exists, incrementing quantity...'); // Debug
+      // If exists, increment quantity
+      const result = await updateCartItemQuantity(existingItemId, 1, true);
+      console.log('Increment result:', result); // Debug
+      return result;
+    } else {
+      console.log('Product not found, adding new item...'); // Debug
+      // If doesn't exist, add new item
+      const response = await fetch(`${BASE_URL}/api/cart/add/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authData.token}`
+        },
+        body: JSON.stringify({
+          product: productId,
+          quantity: 1,
+          charms: []
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Add to cart error:', errorData); // Debug
+        throw new Error(errorData.message || 'Failed to add item to cart');
+      }
+
+      const result = await response.json();
+      console.log('Add to cart result:', result); // Debug
+      return result;
+    }
+  } catch (error) {
+    console.error('Error in addToCart:', error); // Debug
+    throw error;
+  }
+};
+
+// Add this new function to check if product exists in cart
+export const checkProductInCart = async (productId) => {
+  const authData = getAuthData();
+  if (!authData) throw new Error('Not authenticated');
+
+  const response = await fetch(`${BASE_URL}/api/cart/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authData.token}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch cart');
+  }
+
+  const cartData = await response.json();
+  const cartItems = Array.isArray(cartData) ? cartData : cartData.items || [];
+  
+  const existingItem = cartItems.find(item => {
+    // Handle both cases where product is an object or just an ID
+    const itemProductId = typeof item.product === 'object' 
+      ? item.product.id 
+      : item.product;
+    return itemProductId == productId; // Use == for loose comparison (number vs string)
+  });
+  
+  return existingItem ? existingItem.id : null;
+};
