@@ -238,10 +238,11 @@ const NavBar = () => {
         <nav className="px-[9rem] pb-[2rem] pt-[1rem] flex items-center justify-between">
           {/* Left Section - Language Toggle */}
           <div className="flex items-center">
-            <button className="flex items-center border rounded-full text-xs font-medium">
+            {/* <button className="flex items-center border rounded-full text-xs font-medium">
               <span className="px-3 py-1 bg-white rounded-l-full">EN</span>
               <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full">ID</span>
-            </button>
+            </button> */}
+            <div className="p-[3rem]"></div>
           </div>
 
           {/* Center Section - Logo */}
@@ -438,24 +439,24 @@ const NavBar = () => {
             <img src={logo} alt="Sparklore Logo" className="h-12 object-contain" />
           </Link>
           <div className="flex items-center gap-4">
-            <Search className="w-5 h-5 cursor-pointer" onClick={() => setShowSearchBar(!showSearchBar)} />
+            <Search className="w-5 h-5 cursor-pointer text-white" onClick={() => setShowSearchBar(!showSearchBar)} />
             {isLoggedInState ? (
               <LogOut 
-                className="w-5 h-5 cursor-pointer hover:text-[#b87777]" 
+                className="w-5 h-5 cursor-pointer hover:text-[#b87777] text-white" 
                 onClick={() => setShowLogoutConfirm(true)}
                 title="Logout"
               />
             ) : (
               <Link to="/login">
-                <User className="w-5 h-5 cursor-pointer hover:text-[#b87777]" />
+                <User className="w-5 h-5 cursor-pointer hover:text-[#b87777] text-white" />
               </Link>
             )}
             <ShoppingBag 
-              className="w-5 h-5 cursor-pointer" 
+              className="w-5 h-5 cursor-pointer text-white" 
               onClick={handleCartClick} 
             />
             <Menu 
-              className="w-6 h-6 cursor-pointer" 
+              className="w-6 h-6 cursor-pointer text-white" 
               onClick={() => setDrawerOpen(true)}
             />
           </div>
@@ -491,10 +492,12 @@ const NavBar = () => {
             style={{ animation: 'slideIn 0.3s ease-out' }}
           >
             <div className="flex justify-between items-center mb-8">
-              <button className="flex items-center border rounded-full text-xs font-medium">
+              {/* <button className="flex items-center border rounded-full text-xs font-medium">
                 <span className="px-3 py-1 bg-white rounded-l-full text-black">EN</span>
                 <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full text-black">ID</span>
-              </button>
+              </button> */}
+              <div className="p-[3rem]"></div>
+
               <button 
                 className="text-gray-700 text-2xl"
                 onClick={() => setDrawerOpen(false)}
@@ -510,7 +513,7 @@ const NavBar = () => {
                     to={item.path}
                     className={({ isActive }) =>
                       `block py-2 hover:text-[#b87777] ${
-                        isActive ? "text-[#b87777]" : "text-white"
+                        isActive ? "text-[#b87777]" : "text-black"
                       }`
                     }
                     onClick={() => setDrawerOpen(false)}

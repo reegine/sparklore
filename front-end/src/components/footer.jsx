@@ -116,15 +116,29 @@ const Footer = () => {
           <div className="text-center md:text-start">
             <h3 className="text-gray-900 text-lg font-semibold tracking-wide">FOOTER</h3>
             <ul className="mt-3 space-y-2 text-gray-700">
-              <li className="hover:text-[#b87777] cursor-pointer">ABOUT US</li>
+              <li 
+                className="hover:text-[#b87777] cursor-pointer"
+                onClick={() => {
+                  if (window.location.pathname === '/') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    window.location.href = '/';
+                    setTimeout(() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 100);
+                  }
+                }}
+              >
+                ABOUT US
+              </li>
               <Link to="/faq">
-                <li className="hover:text-[#b87777] cursor-pointer">FAQ</li>
+                <li className="hover:text-[#b87777] cursor-pointer pt-2">FAQ</li>
               </Link>
               <Link to="/refund">
-                <li className="hover:text-[#b87777] cursor-pointer">REFUND POLICY</li>
+                <li className="hover:text-[#b87777] cursor-pointer pt-3">REFUND POLICY</li>
               </Link>
               <a href="mailto:sparkloremanagement@gmail.com">
-                <li className="hover:text-[#b87777] cursor-pointer">CONTACT US</li>
+                <li className="hover:text-[#b87777] cursor-pointer pt-3">CONTACT US</li>
               </a>
             </ul>
           </div>
