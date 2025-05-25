@@ -1,253 +1,186 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Star,
-  Plus,
-  SlidersHorizontal,
-  LayoutGrid,
-  Rows2,
-} from "lucide-react";
+import { Star, Plus, SlidersHorizontal, LayoutGrid, Rows2 } from "lucide-react";
 import { cn } from "../../utils/utils.js";
+import { fetchAllCharms } from "../../utils/api.js";
 
-import product1 from "../../assets/default/charmbar_product1.png";
-import product2 from "../../assets/default/charmbar_product2.png";
-import product3 from "../../assets/default/charmbar_product3.png";
-import product4 from "../../assets/default/charmbar_product4.png";
-import product5 from "../../assets/default/charmbar_product5.png";
-import product6 from "../../assets/default/charmbar_product6.png";
-import product7 from "../../assets/default/charmbar_product7.png";
-import product8 from "../../assets/default/charmbar_product8.png";
-
-const products = [
-  {
-    id: 1,
-    name: "CLASSIC SHIMMER CHAIN",
-    type: "GOLD",
-    price: "Rp 59.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product1,
-    category: "Best Seller",
-    stock: 5, // Low stock
-  },
-  {
-    id: 2,
-    name: "CLASSIC SERPENT CHAIN",
-    type: "GOLD",
-    price: "Rp 79.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product2,
-    category: "New Arrival",
-    stock: 15, // Normal stock
-  },
-  {
-    id: 3,
-    name: "CLASSIC SHIMMER CHAIN",
-    type: "SILVER",
-    price: "Rp 49.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product3,
-    category: "Newest",
-    stock: 0, // Sold out
-  },
-  {
-    id: 4,
-    name: "CLASSIC SERPENT CHAIN",
-    type: "SILVER",
-    price: "Rp 69.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product4,
-    category: "Oldest",
-    stock: 8, // Low stock
-  },
-  {
-    id: 5,
-    name: "THE CLASSIC SERPENT NECKLACE",
-    type: "GOLD",
-    price: "Rp 85.499,00",
-    originalPrice: "Rp 89.999,00",
-    rating: 1,
-    image: product5,
-    category: "Best Seller",
-    stock: 0, // Sold out
-  },
-  {
-    id: 6,
-    name: "THE CLASSIC SERPENT NECKLACE",
-    type: "SILVER",
-    price: "Rp 85.499,00",
-    originalPrice: "Rp 89.999,00",
-    rating: 1,
-    image: product6,
-    category: "New Arrival",
-    stock: 2, // Low stock
-  },
-  {
-    id: 7,
-    name: "THE LOVE LIFE NECKLACE",
-    type: "GOLD",
-    price: "Rp 99.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product7,
-    category: "Newest",
-    stock: 12, // Normal stock
-  },
-  {
-    id: 8,
-    name: "THE LOVE LIFE NECKLACE",
-    type: "SILVER",
-    price: "Rp 79.999,00",
-    originalPrice: null,
-    rating: 0,
-    image: product8,
-    category: "Oldest",
-    stock: 1, // Low stock
-  },
-];
-
-export default function ProductGrid() {
+const ProductGrid = () => {
   const navigate = useNavigate();
   const [layout, setLayout] = useState("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [filters, setFilters] = useState({
-    material: [],
-    product: [],
+    category: [],
     price: [],
+    discount: false, // New discount filter
   });
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [charms, setCharms] = useState([]);
+  const [filteredCharms, setFilteredCharms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const loadCharms = async () => {
+      try {
+        const data = await fetchAllCharms();
+        setCharms(data);
+        setFilteredCharms(data);
+        
+        const uniqueCategories = [...new Set(data.map(charm => charm.category))];
+        setCategories(uniqueCategories);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadCharms();
+  }, []);
 
   const handleProductClick = (productId) => {
     navigate(`/products/${productId}`);
   };
 
-  const productsPerPage = layout === "grid" ? 12 : 8;
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-
-  const startIndex = (currentPage - 1) * productsPerPage;
-  const currentProducts = filteredProducts.slice(
-    startIndex,
-    startIndex + productsPerPage
-  );
+  
+  const transformCharms = (charmsToTransform) => {
+    return charmsToTransform.map(charm => {
+      const originalPrice = parseFloat(charm.price);
+      const discountPercentage = parseFloat(charm.discount || 0) / 100;
+      const discountedPrice = originalPrice - (originalPrice * discountPercentage);
+      const hasDiscount = charm.discount > 0;
+      
+      return {
+        id: charm.id,
+        name: charm.name,
+        type: charm.category.toUpperCase(),
+        price: hasDiscount 
+          ? `Rp ${discountedPrice.toLocaleString('id-ID')}`
+          : `Rp ${originalPrice.toLocaleString('id-ID')}`,
+        originalPrice: hasDiscount 
+          ? `Rp ${originalPrice.toLocaleString('id-ID')}`
+          : null,
+        discount: parseFloat(charm.discount || 0),
+        rating: Math.round(charm.rating),
+        image: charm.image,
+        category: charm.category,
+        stock: charm.stock
+      };
+    });
+  };
 
   const toggleFilter = (category, value) => {
     setFilters((prev) => {
       const newFilters = { ...prev };
-      
       if (category === "price") {
-        if (newFilters[category].includes(value)) {
-          newFilters[category] = [];
-        } else {
-          newFilters[category] = [value];
-        }
+        newFilters[category] = newFilters[category].includes(value) ? [] : [value];
+      } else if (category === "discount") {
+        newFilters[category] = !newFilters[category]; // Toggle discount filter
       } else {
-        if (newFilters[category].includes(value)) {
-          newFilters[category] = newFilters[category].filter(
-            (item) => item !== value
-          );
-        } else {
-          newFilters[category] = [...newFilters[category], value];
-        }
+        newFilters[category] = newFilters[category].includes(value)
+          ? newFilters[category].filter(item => item !== value)
+          : [...newFilters[category], value];
       }
       return newFilters;
     });
   };
 
   const isChecked = (category, value) => {
+    if (category === "discount") return filters[category];
     return filters[category].includes(value);
   };
 
-  const parsePrice = (p) =>
-    p ? parseInt(p.replace(/[^\d]/g, "")) : Number.MAX_SAFE_INTEGER;
+  const parsePrice = (p) => p ? parseInt(p.replace(/[^\d]/g, "")) : Number.MAX_SAFE_INTEGER;
+
+  const applyFilters = () => {
+    let filtered = [...charms];
+
+    // Apply category filter
+    if (filters.category.length > 0) {
+      filtered = filtered.filter(charm => filters.category.includes(charm.category));
+    }
+
+    // Apply discount filter
+    if (filters.discount) {
+      filtered = filtered.filter(charm => charm.discount > 0);
+    }
+
+    // Apply price sorting
+    if (filters.price.includes("Low to High")) {
+      filtered.sort((a, b) => a.price - b.price);
+    } else if (filters.price.includes("High to Low")) {
+      filtered.sort((a, b) => b.price - a.price);
+    }
+
+    setFilteredCharms(filtered);
+    setCurrentPage(1);
+  };
 
   const handleDone = () => {
     setIsPopupOpen(false);
-
-    let filtered = [...products];
-
-    if (filters.material.length > 0) {
-      filtered = filtered.filter((product) =>
-        filters.material.includes(product.type)
-      );
-    }
-
-    if (filters.product.length > 0) {
-      filtered = filtered.filter((product) =>
-        filters.product.includes(product.category)
-      );
-    }
-
-    if (filters.price.includes("Low to High")) {
-      filtered.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
-    } else if (filters.price.includes("High to Low")) {
-      filtered.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
-    }
-
-    setFilteredProducts(filtered);
-    setCurrentPage(1);
+    applyFilters();
   };
 
   const resetFilters = () => {
-    setFilters({
-      material: [],
-      product: [],
-      price: [],
-    });
-    setFilteredProducts(products);
+    setFilters({ category: [], price: [], discount: false });
+    setFilteredCharms(charms);
     setCurrentPage(1);
   };
 
+  const productsPerPage = layout === "grid" ? 12 : 8;
+  const transformedCharms = transformCharms(filteredCharms);
+  const totalPages = Math.ceil(transformedCharms.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const currentProducts = transformedCharms.slice(startIndex, startIndex + productsPerPage);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f3] px-6 py-10 font-serif relative flex justify-center items-center">
+        <div className="text-[#403c39]">Loading charms...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#fdf8f3] px-6 py-10 font-serif relative flex justify-center items-center">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#fdf8f3] px-6 py-10 font-serif relative">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6 border-b border-[#ede7de] pb-2">
         <div className="flex gap-2 text-[#403c39]">
           <button
             onClick={() => setLayout("rows")}
-            className={cn(
-              "p-2 rounded",
-              layout === "rows" ? "bg-[#e2dbce]" : "bg-transparent"
-            )}
+            className={cn("p-2 rounded", layout === "rows" ? "bg-[#e2dbce]" : "bg-transparent")}
           >
             <Rows2 size={20} />
           </button>
-          
           <button
             onClick={() => setLayout("grid")}
-            className={cn(
-              "p-2 rounded",
-              layout === "grid" ? "bg-[#e2dbce]" : "bg-transparent"
-            )}
+            className={cn("p-2 rounded", layout === "grid" ? "bg-[#e2dbce]" : "bg-transparent")}
           >
             <LayoutGrid size={20} />
           </button>
         </div>
         <p className="text-sm text-[#b1a696] tracking-wide">
-          {filteredProducts.length} Products
+          {transformedCharms.length} Products
         </p>
-        <button
-          onClick={() => setIsPopupOpen(true)}
-          className="text-[#403c39]"
-        >
+        <button onClick={() => setIsPopupOpen(true)} className="text-[#403c39]">
           <SlidersHorizontal size={20} />
         </button>
       </div>
 
-      {/* Products Grid */}
-      <div
-        className={`max-w-6xl mx-auto grid ${
-          layout === "grid" ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
-        } gap-6`}
-      >
+      <div className={`max-w-6xl mx-auto grid ${
+        layout === "grid" ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
+      } gap-6`}>
         {currentProducts.map((product) => (
           <div
             key={product.id}
-            className={`p-2 rounded-lg  hover:shadow-md transition duration-200 relative  ${
+            className={`p-2 rounded-lg hover:shadow-md transition duration-200 relative ${
               product.stock === 0 ? 'opacity-70' : 'cursor-pointer'
             }`}
             onClick={() => product.stock > 0 && handleProductClick(product.id)}
@@ -261,7 +194,13 @@ export default function ProductGrid() {
                 }`}
               />
               
-              {/* Stock Status Badge */}
+              {/* Discount badge */}
+              {product.discount > 0 && (
+                <div className="absolute top-2 right-2 bg-[#b87777] text-white text-xs font-bold px-2 py-1 rounded">
+                  {product.discount}% OFF
+                </div>
+              )}
+              
               {product.stock === 0 ? (
                 <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                   SOLD OUT
@@ -272,15 +211,11 @@ export default function ProductGrid() {
                 </div>
               ) : null}
               
-              {/* Only show add to cart button if product is in stock */}
               {product.stock > 0 && (
                 <div className="absolute bottom-2 right-2 bg-white p-1 rounded-b-xs">
                   <button 
                     className="bg-white text-[#c3a46f] border border-[#c3a46f] p-1 rounded-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Add to cart logic here
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Plus size={16} />
                   </button>
@@ -297,23 +232,14 @@ export default function ProductGrid() {
                 </span>
               </p>
               <div className="flex justify-center mt-1">
-                {Array(5)
-                  .fill(0)
-                  .map((_, i) => (
-                    <Star
-                      key={i}
-                      size={14}
-                      className={cn(
-                        "mx-[1px]",
-                        i < product.rating
-                          ? "text-yellow-500"
-                          : "text-gray-300"
-                      )}
-                    />
-                  ))}
-                <span className="text-xs text-gray-500 ml-1">
-                  ({product.rating})
-                </span>
+                {Array(5).fill(0).map((_, i) => (
+                  <Star
+                    key={i}
+                    size={14}
+                    className={cn("mx-[1px]", i < product.rating ? "text-yellow-500" : "text-gray-300")}
+                  />
+                ))}
+                <span className="text-xs text-gray-500 ml-1">({product.rating})</span>
               </div>
               <div className="mt-1">
                 <p className="text-sm font-medium text-[#403c39]">
@@ -330,10 +256,9 @@ export default function ProductGrid() {
         ))}
       </div>
 
-      {/* Pagination */}
       <div className="flex justify-center mt-6">
         <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
           className="px-4 py-2 bg-[#c3a46f] text-white rounded-l"
         >
@@ -343,9 +268,7 @@ export default function ProductGrid() {
           Page {currentPage} of {totalPages}
         </span>
         <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
           className="px-4 py-2 bg-[#c3a46f] text-white rounded-r"
         >
@@ -353,97 +276,74 @@ export default function ProductGrid() {
         </button>
       </div>
 
-      {/* Dark overlay when popup is open */}
       {isPopupOpen && (
         <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} className="fixed inset-0 z-40 flex items-center justify-center">
-            <div className="bg-white rounded-xl p-6 w-[300px] shadow-lg relative">
-            {/* Popup content goes here */}
-            </div>
-        </div>
-      )}
-
-      {/* Filter Popup */}
-      {isPopupOpen && (
-        <div
-          className="fixed z-50 bg-white rounded-xl p-6 w-[300px] shadow-lg border border-[#ede7de]"
-          style={{
-            top: "50%",
-            right: "50%",
-            transform: "translate(50%, -50%)",
-          }}
-        >
-          <div className="flex justify-between items-center border-b pb-2 mb-4">
-            <h2 className="text-lg font-serif tracking-wide text-[#403c39]">
-              FILTER
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={resetFilters}
-                className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
-              >
-                Reset
-              </button>
-              <button
-                onClick={handleDone}
-                className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4 text-sm text-[#403c39]">
-            <div>
-              <h3 className="font-semibold mb-1">Material</h3>
-              <div className="flex gap-4">
-                {["GOLD", "SILVER"].map((val) => (
-                  <label key={val} className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={isChecked("material", val)}
-                      onChange={() => toggleFilter("material", val)}
-                      className="accent-[#c3a46f]"
-                    />
-                    {val.charAt(0) + val.slice(1).toLowerCase()}
-                  </label>
-                ))}
+          <div className="bg-white rounded-xl p-6 w-[300px] shadow-lg relative">
+            <div className="flex justify-between items-center border-b pb-2 mb-4">
+              <h2 className="text-lg font-serif tracking-wide text-[#403c39]">FILTER</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={resetFilters}
+                  className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={handleDone}
+                  className="text-sm px-3 py-1 rounded border text-[#403c39] border-[#e2dbce] hover:bg-[#f1ede5]"
+                >
+                  Done
+                </button>
               </div>
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-1">Product</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {["Best Seller", "New Arrival", "Newest", "Oldest"].map(
-                  (val) => (
-                    <label key={val} className="flex items-center gap-1">
+            <div className="space-y-4 text-sm text-[#403c39]">
+              <div>
+                <h3 className="font-semibold mb-1">Category</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.map((category) => (
+                    <label key={category} className="flex items-center gap-1 capitalize">
                       <input
                         type="checkbox"
-                        checked={isChecked("product", val)}
-                        onChange={() => toggleFilter("product", val)}
+                        checked={isChecked("category", category)}
+                        onChange={() => toggleFilter("category", category)}
+                        className="accent-[#c3a46f]"
+                      />
+                      {category.replace(/_/g, ' ')}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-1">Price</h3>
+                <div className="flex gap-4">
+                  {["Low to High", "High to Low"].map((val) => (
+                    <label key={val} className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="price"
+                        checked={isChecked("price", val)}
+                        onChange={() => toggleFilter("price", val)}
                         className="accent-[#c3a46f]"
                       />
                       {val}
                     </label>
-                  )
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <h3 className="font-semibold mb-1">Price</h3>
-              <div className="flex gap-4">
-                {["Low to High", "High to Low"].map((val) => (
-                  <label key={val} className="flex items-center gap-1">
-                    <input
-                      type="radio"
-                      name="price"
-                      checked={isChecked("price", val)}
-                      onChange={() => toggleFilter("price", val)}
-                      className="accent-[#c3a46f]"
-                    />
-                    {val}
-                  </label>
-                ))}
+              <div>
+                <h3 className="font-semibold mb-1">Discount</h3>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={isChecked("discount", true)}
+                    onChange={() => toggleFilter("discount", true)}
+                    className="accent-[#c3a46f]"
+                  />
+                  Show only discounted items
+                </label>
               </div>
             </div>
           </div>
@@ -451,4 +351,6 @@ export default function ProductGrid() {
       )}
     </div>
   );
-}
+};
+
+export default ProductGrid;

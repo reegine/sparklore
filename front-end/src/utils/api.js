@@ -317,3 +317,58 @@ export const checkProductInCart = async (productId) => {
   
   return existingItem ? existingItem.id : null;
 };
+
+
+export const subscribeToNewsletter = async () => {
+  const authData = getAuthData();
+  if (!authData) throw new Error('User not authenticated');
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/newsletters/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authData.token}`
+      },
+      body: JSON.stringify({ user: authData.user.id }),
+    });
+
+    const data = await response.json();
+
+    if (response.status === 200 || response.status === 201) {
+      return { success: true, data };
+    }
+
+    // Check if the error is due to already being subscribed
+    if (response.status === 400 && data.email && data.email.includes('already exists')) {
+      return { alreadySubscribed: true, data };
+    }
+
+    throw new Error(data.message || 'Failed to subscribe to newsletter');
+  } catch (error) {
+    console.error('Newsletter subscription error:', error);
+    throw error;
+  }
+};
+
+// Add to src/api.js
+export const fetchAllCharms = async () => {
+  const response = await fetch(`${BASE_URL}/api/charms/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch charms');
+  }
+
+  const charms = await response.json();
+  return charms.map(charm => ({
+    ...charm,
+    price: parseFloat(charm.price),
+    discount: parseFloat(charm.discount || 0),
+    rating: parseFloat(charm.rating || 0)
+  }));
+};
