@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getAuthData } from '../../utils/api';
 
 // Checkbox component
 const Checkbox = ({ id, ...props }) => (
@@ -14,30 +15,36 @@ const Checkbox = ({ id, ...props }) => (
 const FinalCheckout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const orderDetails = location.state?.orderDetails || {
-    items: [
-      {
-        name: "Charm Link Custom Bracelet",
-        price: 369998,
-        quantity: 1,
-        charms: [
-          { name: "Horse", image: "/charm1.png" },
-          { name: "Hand", image: "/charm2.png" },
-          { name: "Palm Tree", image: "/charm3.png" },
-          { name: "Music Note", image: "/charm4.png" }
-        ],
-        message: "This is for the special message if the user want to send a message to the recipient."
-      },
-      {
-        name: "Marbella Ring",
-        price: 99999,
-        quantity: 1
-      }
-    ],
-    shipping: { name: "Express", price: 35000 },
-    payment: { name: "VISA", icon: "💳" },
-    total: 504997
-  };
+  const orderDetails = location.state?.orderDetails;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [formData, setFormData] = useState({
+    cardName: '',
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    sameAddress: true,
+    differentAddress: false
+  });
+
+  console.log("Received order details:", orderDetails);
+
+
+    if (!orderDetails) {
+    return (
+      <div className="min-h-screen bg-[#fdfaf5] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg mb-4">No order details found</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="bg-[#3a2e2a] text-white px-4 py-2 rounded-md hover:bg-[#2c221f]"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -45,30 +52,121 @@ const FinalCheckout = () => {
   };
 
   // Calculate totals
-  const subtotal = orderDetails.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shippingCost = orderDetails.shipping?.price || 0;
+  const subtotal = orderDetails.subtotal || orderDetails.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const shippingCost = orderDetails.shippingCost || orderDetails.shipping?.price || 0;
   const total = orderDetails.total || (subtotal + shippingCost);
 
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
   // Handle payment submission
-  const handlePayment = () => {
-    // Here you would typically:
-    // 1. Validate form inputs
-    // 2. Process payment (API call)
-    // 3. Then navigate to tracking page
-    
-    // Generate a random order ID for demo purposes
-    const orderId = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-    
-    navigate('/track-order', {
-      state: {
-        orderId,
-        orderDetails: {
-          ...orderDetails,
-          status: 'Processing',
-          estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days from now
+  const handlePayment = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+       const authData = getAuthData();
+        if (!authData) {
+          throw new Error('User not authenticated');
         }
+
+      // Extract just the product IDs from the items
+      const productIds = orderDetails.items.map(item => {
+        // Ensure we're sending the ID as a number
+        const id = item.id || item.productId;
+        return typeof id === 'string' ? parseInt(id, 10) : id;
+      }).filter(id => !isNaN(id)); // Filter out any invalid IDs
+
+      if (productIds.length === 0) {
+        throw new Error('No valid product IDs found in order');
       }
-    });
+      console.log(authData.user.id);
+
+      console.log("Product prices:", orderDetails.items.map(item => ({
+        id: item.id || item.productId,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.price * item.quantity
+      })));
+
+      console.log("Calculated subtotal:", orderDetails.items.reduce((sum, item) => 
+        sum + (item.price * item.quantity), 0));
+      
+      console.log("Shipping cost:", shippingCost);
+      console.log("Calculated total:", 
+        orderDetails.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost);
+
+      // Prepare order data for API
+      const calculatedSubtotal = orderDetails.items.reduce((sum, item) => 
+        sum + (parseFloat(item.price) * item.quantity), 0);
+      
+      const calculatedTotal = calculatedSubtotal + parseFloat(shippingCost);
+
+      // Prepare order data with explicit decimal conversion
+      const orderData = {
+        products: productIds,
+        total_price: parseFloat(calculatedTotal.toFixed(2)),
+        status: 'pending',
+        shipping_address: orderDetails.shippingAddress?.address || 'Address not provided',
+        shipping_cost: parseFloat(shippingCost.toFixed(2)),
+        user: authData.user.id,
+        subtotal: parseFloat(calculatedSubtotal.toFixed(2))
+      };
+
+       console.log("Final API payload with parsed values:", {
+        ...orderData,
+        products: productIds,
+        calculated_values: {
+          subtotal: calculatedSubtotal,
+          shipping: shippingCost,
+          total: calculatedTotal
+        }
+      });
+
+      const response = await fetch('http://192.168.1.12:8000/api/orders/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authData.token}`
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        console.error('API Error Response:', responseData);
+        const errorMessage = responseData.detail || 
+                            responseData.message || 
+                            (responseData.errors ? JSON.stringify(responseData.errors) : 'Failed to place order');
+        throw new Error(errorMessage);
+      }
+
+      const orderId = responseData.id;
+      console.log('Order created successfully:', responseData);
+      
+      navigate('/track-order', {
+        state: {
+          orderId,
+          orderDetails: {
+            ...orderDetails,
+            status: 'Processing',
+            estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Order submission error:', err);
+      setError(err.message || 'Failed to process payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,8 +179,8 @@ const FinalCheckout = () => {
           {/* Shipping Info */}
           <div className="bg-[#f9f2e6] p-4 rounded-lg">
             <h2 className="font-medium mb-2">Shipping Information</h2>
-            <p className="text-sm">Express Delivery (Est. next day)</p>
-            <p className="text-sm mt-1">{formatCurrency(orderDetails.shipping?.price || 0)}</p>
+            <p className="text-sm">{orderDetails.shipping?.name || 'Standard'} Delivery ({orderDetails.shipping?.description || 'Est. 3-5 days'})</p>
+            <p className="text-sm mt-1">{formatCurrency(shippingCost)}</p>
           </div>
 
           {/* Products */}
@@ -92,6 +190,10 @@ const FinalCheckout = () => {
                 src={item.image || (item.name.includes('Bracelet') ? "/bracelet.jpg" : "/ring.jpg")} 
                 alt={item.name}
                 className="w-24 h-24 rounded-md object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/100";
+                }}
               />
               <div>
                 <h2 className="text-lg font-semibold">{item.name}</h2>
@@ -103,7 +205,16 @@ const FinalCheckout = () => {
                     <p className="text-sm font-medium mb-1">Charm Selection</p>
                     <div className="flex gap-1">
                       {item.charms.map((charm, i) => (
-                        <img key={i} src={charm.image} alt={charm.name} className="w-6 h-6" />
+                        <img 
+                          key={i} 
+                          src={charm.image || charm} 
+                          alt={charm.name || `Charm ${i}`} 
+                          className="w-6 h-6"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://via.placeholder.com/24";
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
@@ -144,38 +255,60 @@ const FinalCheckout = () => {
             <div className="text-2xl">{orderDetails.payment?.icon || "💳"}</div>
           </div>
 
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <label className="text-sm">Name on Card</label>
               <input
                 type="text"
+                name="cardName"
+                value={formData.cardName}
+                onChange={handleInputChange}
                 placeholder="Jane Doe"
                 className="w-full mt-1 p-2 rounded-md border border-[#e3d5c5] bg-white"
+                required
               />
             </div>
             <div>
               <label className="text-sm">Card Number</label>
               <input
                 type="text"
+                name="cardNumber"
+                value={formData.cardNumber}
+                onChange={handleInputChange}
                 placeholder="1234 5678 9012 3456"
                 className="w-full mt-1 p-2 rounded-md border border-[#e3d5c5] bg-white"
+                required
               />
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="text-sm">Exp. Date</label>
                 <input
-                  type="text"
-                  placeholder="MM/YY"
+                  type="date"
+                  name="expiryDate"
+                  value={formData.expiryDate}
+                  onChange={handleInputChange}
                   className="w-full mt-1 p-2 rounded-md border border-[#e3d5c5] bg-white"
+                  required
+                  min={new Date().toISOString().slice(0, 7)} // Prevent past dates
                 />
               </div>
               <div className="flex-1">
                 <label className="text-sm">CVV</label>
                 <input
                   type="text"
+                  name="cvv"
+                  value={formData.cvv}
+                  onChange={handleInputChange}
                   placeholder="***"
                   className="w-full mt-1 p-2 rounded-md border border-[#e3d5c5] bg-white"
+                  required
                 />
               </div>
             </div>
@@ -184,11 +317,21 @@ const FinalCheckout = () => {
               <h4 className="font-semibold text-md mt-4">Billing Address</h4>
               <div className="mt-2 space-y-2">
                 <label className="flex items-center gap-2 text-sm">
-                  <Checkbox id="sameAddress" />
+                  <Checkbox 
+                    id="sameAddress" 
+                    name="sameAddress"
+                    checked={formData.sameAddress}
+                    onChange={handleInputChange}
+                  />
                   Same as shipping address
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <Checkbox id="differentAddress" />
+                  <Checkbox 
+                    id="differentAddress" 
+                    name="differentAddress"
+                    checked={formData.differentAddress}
+                    onChange={handleInputChange}
+                  />
                   Use different address
                 </label>
               </div>
@@ -196,9 +339,10 @@ const FinalCheckout = () => {
 
             <button 
               onClick={handlePayment}
-              className="w-full mt-6 bg-[#3a2e2a] text-white py-3 rounded-md hover:bg-[#2c221f] transition"
+              disabled={isSubmitting}
+              className={`w-full mt-6 bg-[#3a2e2a] text-white py-3 rounded-md hover:bg-[#2c221f] transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              Pay Now
+              {isSubmitting ? 'Processing...' : 'Pay Now'}
             </button>
           </div>
         </div>

@@ -14,20 +14,24 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-      try {
-        const response = await fetch(`http://192.168.1.12:8000/api/products/${productId}/`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch product');
-        }
-        const data = await response.json();
-        setProduct(data);
-        setMainImage(data.image);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
+    try {
+      const response = await fetch(`http://192.168.1.12:8000/api/products/${productId}/`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch product');
       }
-    };
+      const data = await response.json();
+      // Ensure charms_detail exists as an array
+      if (!data.charms_detail) {
+        data.charms_detail = [];
+      }
+      setProduct(data);
+      setMainImage(data.image);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
 
     fetchProduct();
   }, [productId]);
@@ -81,11 +85,12 @@ const ProductDetail = () => {
       {showPopup && (
         <>
           {showCharms && (
-            <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
-              <div className="bg-[#fdfaf3] p-6 rounded-2xl border-2 border-black text-center max-w-xl w-full">
-                <h2 className="text-2xl font-semibold text-[#3b322c]">SURPRISE!</h2>
-                <p className="mt-2 text-[#3b322c]">You've unlock limited edition charms, do you want to add them for only Rp. 89.999/charm</p>
+          <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
+            <div className="bg-[#fdfaf3] p-6 rounded-2xl border-2 border-black text-center max-w-xl w-full">
+              <h2 className="text-2xl font-semibold text-[#3b322c]">SURPRISE!</h2>
+              <p className="mt-2 text-[#3b322c]">You've unlock limited edition charms, do you want to add them for only Rp. 89.999/charm</p>
 
+              {product.charms_detail && product.charms_detail.length > 0 ? (
                 <div className="grid grid-cols-4 gap-4 my-6">
                   {product.charms_detail.map((charm, index) => (
                     <div key={index} className="flex flex-col items-center">
@@ -94,14 +99,19 @@ const ProductDetail = () => {
                     </div>
                   ))}
                 </div>
-
-                <div className="flex gap-4 justify-center">
-                  <button onClick={handleAddOrSkipCharms} className="bg-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Add</button>
-                  <button onClick={handleAddOrSkipCharms} className="border border-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Maybe Next Time</button>
+              ) : (
+                <div className="my-6 text-[#3b322c]">
+                  No charms available for this product
                 </div>
+              )}
+
+              <div className="flex gap-4 justify-center">
+                <button onClick={handleAddOrSkipCharms} className="bg-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Add</button>
+                <button onClick={handleAddOrSkipCharms} className="border border-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Maybe Next Time</button>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {showNote && (
             <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
@@ -177,7 +187,7 @@ const ProductDetail = () => {
               <ul className="list-disc pl-5 text-[#4d4a45]">
                 <li>Material: {product.label}</li>
                 <li>Stock: {product.stock} available</li>
-                {product.charms_detail.length > 0 && (
+                {product.charms_detail && product.charms_detail.length > 0 && (
                   <li>Compatible charms: {product.charms_detail.map(c => c.name).join(', ')}</li>
                 )}
               </ul>

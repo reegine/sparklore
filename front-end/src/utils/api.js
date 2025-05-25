@@ -11,6 +11,7 @@ const storeAuthData = (data) => {
     token: data.access,
     refreshToken: data.refresh, // Store refresh token if needed
     email: data.user.email,
+    user: { id: data.user.id }, // Store the user object with ID
     expiresAt: expiresAt
   }));
 };

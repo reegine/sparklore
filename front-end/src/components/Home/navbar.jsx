@@ -582,10 +582,22 @@ const handleConfirmDelete = async () => {
                 </div>
 
                 {/* Buttons */}
+                {/* In the cart drawer buttons section */}
                 <div className="mt-6 space-y-4">
                   <Link 
                     to="/checkout" 
+                    state={{ selectedItems: cartItems.filter(item => item.selected) }}
                     className="w-full bg-[#e9d8a6] text-gray-800 font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition block text-center"
+                    onClick={() => {
+                      // Only allow checkout if at least one item is selected
+                      const hasSelectedItems = cartItems.some(item => item.selected);
+                      if (!hasSelectedItems) {
+                        setSnackbarMessage('Please select at least one item to checkout');
+                        setSnackbarType('error');
+                        setShowSnackbar(true);
+                        return false; // Prevent navigation
+                      }
+                    }}
                   >
                     Checkout
                   </Link>
