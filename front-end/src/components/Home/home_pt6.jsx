@@ -37,6 +37,18 @@ const Reviews = () => {
     return stats;
   };
 
+  // Sort reviews by highest rating first, then by oldest date
+  const sortReviews = (reviews) => {
+    return [...reviews].sort((a, b) => {
+      // First sort by rating (descending)
+      if (b.rating !== a.rating) {
+        return b.rating - a.rating;
+      }
+      // If ratings are equal, sort by date (ascending - oldest first)
+      return new Date(a.uploaded_at) - new Date(b.uploaded_at);
+    });
+  };
+
   const ratingStats = calculateRatingStats();
 
   // Fetch reviews and product details
@@ -46,7 +58,10 @@ const Reviews = () => {
         // Fetch reviews
         const reviewsResponse = await fetch(`${BASE_URL}/api/reviews/`);
         if (!reviewsResponse.ok) throw new Error("Failed to fetch reviews");
-        const reviewsData = await reviewsResponse.json();
+        let reviewsData = await reviewsResponse.json();
+        
+        // Sort the reviews immediately after fetching
+        reviewsData = sortReviews(reviewsData);
         
         // Fetch product details for each review
         const productIds = new Set();
@@ -131,7 +146,7 @@ const Reviews = () => {
       {/* Section Title & Rating Summary */}
       <div className="max-w-6xl mx-auto text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-900">WHAT THEY SAY</h2>
-        <div className="flex items-center justify-start mt-4">
+        <div className="flex items-center justify-center mt-4">
           <div className="flex items-center">
             <div className="flex text-yellow-500">
               {[...Array(5)].map((_, i) => (
@@ -143,12 +158,12 @@ const Reviews = () => {
                 />
               ))}
             </div>
-            <span className="ml-2 text-gray-800 text-lg font-medium justify-start">
+            <span className="ml-2 text-gray-800 text-lg font-medium">
               {ratingStats.average} ({ratingStats.total} Reviews)
             </span>
             <button 
               onClick={() => setShowRatingBreakdown(!showRatingBreakdown)}
-              className="ml-2 text-gray-800 justify-start"
+              className="ml-2 text-gray-800"
             >
               {showRatingBreakdown ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -157,41 +172,25 @@ const Reviews = () => {
 
         {/* Rating Breakdown - Only shown when dropdown is clicked */}
         {showRatingBreakdown && (
-          <div className="max-w-full mx-auto mt-6 bg-[#fdfbf7] p-6 rounded-xl shadow-md">
-            <div className="flex justify-start items-center mb-6">
-              <Star className="text-yellow-400" size={40} fill="currentColor" />
-              <span className="text-4xl font-bold text-gray-900 ml-2">{ratingStats.average}</span>
-            </div>
-            <div className="space-y-2">
-              {[5, 4, 3, 2, 1].map((stars) => {
-                const count = ratingStats[stars];
-                const percent = ratingStats.total ? (count / ratingStats.total) * 100 : 0;
-                return (
-                  <div key={stars} className="flex items-center gap-2">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          size={16}
-                          className={i < stars ? "text-yellow-400" : "text-gray-300"}
-                          fill={i < stars ? "currentColor" : "none"}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex-1 bg-gray-200 h-3 rounded-full overflow-hidden">
-                      <div
-                        className="bg-gray-900 h-full rounded-full"
-                        style={{ width: `${percent}%` }}
-                      ></div>
-                    </div>
-                    <div className="w-8 text-right text-sm text-gray-700">({count})</div>
+          <div className="max-w-md mx-auto mt-4 bg-[#faf7f0] p-4 rounded-lg shadow-inner">
+            {[5, 4, 3, 2, 1].map((stars) => (
+              <div key={stars} className="flex items-center mb-2">
+                <div className="w-10 text-sm text-gray-700">{stars} star</div>
+                <div className="flex-1 mx-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-yellow-500 h-2 rounded-full" 
+                      style={{ width: `${(ratingStats[stars] / ratingStats.total) * 100}%` }}
+                    ></div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <div className="w-10 text-sm text-right text-gray-700">
+                  {ratingStats[stars]}
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
       </div>
 
       {/* Masonry Grid */}
@@ -205,13 +204,13 @@ const Reviews = () => {
             <img
               src={review.image}
               alt={review.user_name}
-              className="w-full object-cover rounded-md"
+              className="w-full h-64 object-cover rounded-md"
             />
 
             {/* Review Content */}
             <div className="mt-4 px-2">
               <h3 className="font-semibold text-lg text-gray-900">{review.user_name}</h3>
-              <p className="text-gray-400 text-sm">{formatDate(review.uploaded_at)}</p>
+              <p className="text-gray-500 text-sm">{formatDate(review.uploaded_at)}</p>
               <div className="flex text-yellow-500">
                 {[...Array(5)].map((_, i) => (
                   <Star
