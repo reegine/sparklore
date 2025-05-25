@@ -1,39 +1,39 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-const Faq = () => {
+const RefundPolicy = () => {
   return (
     <div className="bg-[#f8f4ed] min-h-screen py-12 px-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Refund Policy</h1>
         
         <div className="bg-white p-6 rounded-lg border border-[#e5cfa4] shadow-sm mb-8">
           <div className="space-y-6">
             <div className="border-b border-[#f0f0f0] pb-4 last:border-0 last:pb-0">
-              <h3 className="text-lg font-medium text-gray-700">How long does shipping take?</h3>
+              <h3 className="text-lg font-medium text-gray-700">Returns & Exchanges</h3>
               <p className="text-gray-600 mt-2">
-                Our standard shipping typically takes 3-5 business days. During peak seasons, there may be slight delays.
+                We accept returns within 14 days of delivery. Items must be unused, in their original condition, and in the original packaging.
               </p>
             </div>
             
             <div className="border-b border-[#f0f0f0] pb-4 last:border-0 last:pb-0">
-              <h3 className="text-lg font-medium text-gray-700">Do you offer international shipping?</h3>
+              <h3 className="text-lg font-medium text-gray-700">Refund Process</h3>
               <p className="text-gray-600 mt-2">
-                Currently, we only ship within Indonesia. We're working to expand our shipping options in the future.
+                Once we receive your return, we'll inspect it and notify you of the refund status. If approved, refunds will be processed to the original payment method within 5-10 business days.
               </p>
             </div>
             
             <div className="border-b border-[#f0f0f0] pb-4 last:border-0 last:pb-0">
-              <h3 className="text-lg font-medium text-gray-700">How can I track my order?</h3>
+              <h3 className="text-lg font-medium text-gray-700">Damaged or Defective Items</h3>
               <p className="text-gray-600 mt-2">
-                Once your order is shipped, you'll receive a tracking number via email. You can use this number to track your package on our website or the courier's site.
+                If you receive a damaged or defective item, please contact us immediately at <a href="mailto:sparkloremanagement@gmail.com" className="text-[#b87777]">sparkloremanagement@gmail.com</a> with photos of the product and packaging.
               </p>
             </div>
             
             <div className="border-b border-[#f0f0f0] pb-4 last:border-0 last:pb-0">
-              <h3 className="text-lg font-medium text-gray-700">What payment methods do you accept?</h3>
+              <h3 className="text-lg font-medium text-gray-700">Non-Refundable Items</h3>
               <p className="text-gray-600 mt-2">
-                We accept Visa, Mastercard, BCA, Mandiri, and GoPay. All transactions are secure and encrypted.
+                Certain items like sale products or personalized items cannot be returned unless they arrive damaged or defective.
               </p>
             </div>
           </div>
@@ -41,10 +41,10 @@ const Faq = () => {
 
         {/* <div className="flex justify-center space-x-4">
           <Link 
-            to="/refund-policy" 
+            to="/faq" 
             className="bg-[#e5cfa4] text-gray-900 font-semibold py-2 px-6 rounded-md hover:bg-[#d4bf8f] transition-colors inline-block shadow-sm"
           >
-            View Refund Policy
+            View FAQ
           </Link>
           <Link 
             to="/" 
@@ -58,4 +58,4 @@ const Faq = () => {
   );
 };
 
-export default Faq;
+export default RefundPolicy;

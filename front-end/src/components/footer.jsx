@@ -117,10 +117,10 @@ const Footer = () => {
             <h3 className="text-gray-900 text-lg font-semibold tracking-wide">FOOTER</h3>
             <ul className="mt-3 space-y-2 text-gray-700">
               <li className="hover:text-[#b87777] cursor-pointer">ABOUT US</li>
-              <Link to="/faq-refund">
+              <Link to="/faq">
                 <li className="hover:text-[#b87777] cursor-pointer">FAQ</li>
               </Link>
-              <Link to="/faq-refund">
+              <Link to="/refund">
                 <li className="hover:text-[#b87777] cursor-pointer">REFUND POLICY</li>
               </Link>
               <a href="mailto:sparkloremanagement@gmail.com">

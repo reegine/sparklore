@@ -28,6 +28,8 @@ import ForUs from './pages/for_us.jsx'
 import ForHim from './pages/for_him.jsx'
 import ForHer from './pages/for_her.jsx'
 import FaqRefundPage from './pages/faq.jsx'
+import FaqPage from './pages/faq.jsx'
+import RefundPage from './pages/refund.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -52,7 +54,8 @@ const router = createBrowserRouter([
   {path:"/for-us", element: <ForUs />},
   {path:"/for-him", element: <ForHim />},
   {path:"/for-her", element: <ForHer />},
-  {path:"/faq-refund", element: <FaqRefundPage />},
+  {path:"/faq", element: <FaqPage />},
+  {path:"/refund", element: <RefundPage />},
   {path:"*", element: <NotFound/>},
 ]);
 

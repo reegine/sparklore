@@ -140,7 +140,7 @@ export default function CharmCustomizerFull() {
   );
 
   const getCharmPosition = (index, total) => {
-    const baseSize = '28.33%';
+    const baseSize = '25.33%';
 
     if (total === 1) {
       return {
@@ -408,7 +408,7 @@ export default function CharmCustomizerFull() {
                             alt={charm.name}
                             className="hover:scale-105 transition rounded border p-1 w-full"
                           />
-                          <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 flex justify-center items-center text-white text-sm font-semibold transition">
+                          <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} className="absolute inset-0 opacity-0 group-hover:opacity-100 flex justify-center items-center text-white text-sm font-semibold transition">
                             {charm.name}
                           </div>
                         </div>
