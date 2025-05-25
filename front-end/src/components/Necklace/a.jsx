@@ -7,7 +7,9 @@ import {
   LayoutGrid,
   Rows2,
 } from "lucide-react";
-import { cn, BASE_URL } from "../../utils/utils.js";
+import { cn } from "../../utils/utils.js";
+import { BASE_URL } from "../../utils/api.js";
+
 
 export default function ProductGrid() {
   const navigate = useNavigate();
