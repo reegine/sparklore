@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { isLoggedIn, addToCart } from "../../utils/api";
+import { isLoggedIn, addToCart, BASE_URL } from "../../utils/api";
 import Snackbar from '../snackbar.jsx';
 
 const HomePart3 = () => {
@@ -18,7 +18,7 @@ const HomePart3 = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch("http://192.168.1.12:8000/api/products/");
+        const response = await fetch(`${BASE_URL}/api/products/`);
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }

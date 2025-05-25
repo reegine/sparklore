@@ -7,7 +7,7 @@ import {
   LayoutGrid,
   Rows2,
 } from "lucide-react";
-import { cn } from "../../utils/utils.js";
+import { cn, BASE_URL } from "../../utils/utils.js";
 
 export default function ProductGrid() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export default function ProductGrid() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch("http://192.168.1.12:8000/api/products/");
+        const response = await fetch(`${BASE_URL}/api/products/`);
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }

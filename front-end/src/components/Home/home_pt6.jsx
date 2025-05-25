@@ -211,7 +211,7 @@ const Reviews = () => {
             {/* Review Content */}
             <div className="mt-4 px-2">
               <h3 className="font-semibold text-lg text-gray-900">{review.user_name}</h3>
-              <p className="text-gray-500 text-sm">{formatDate(review.uploaded_at)}</p>
+              <p className="text-gray-400 text-sm">{formatDate(review.uploaded_at)}</p>
               <div className="flex text-yellow-500">
                 {[...Array(5)].map((_, i) => (
                   <Star

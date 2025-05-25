@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { BASE_URL } from "../../utils/api.js";
+
 
 const ProductDetail = () => {
   const { productId } = useParams();
@@ -15,7 +17,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProduct = async () => {
     try {
-      const response = await fetch(`http://192.168.1.12:8000/api/products/${productId}/`);
+      const response = await fetch(`${BASE_URL}/api/products/${productId}/`);
       if (!response.ok) {
         throw new Error('Failed to fetch product');
       }

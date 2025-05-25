@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import clsx from "clsx";
+import { BASE_URL } from "../../utils/api.js";
 
 // BASE IMAGES
 import baseNecklace from "../../assets/default/basenecklace.png";
@@ -120,7 +121,7 @@ const ProductDetailCharm = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`http://192.168.1.12:8000/api/products/${productId}/`);
+        const response = await fetch(`${BASE_URL}/api/products/${productId}/`);
         if (!response.ok) {
           throw new Error('Failed to fetch product');
         }

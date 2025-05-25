@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAuthData } from '../../utils/api';
+import { getAuthData, BASE_URL } from '../../utils/api';
 
 // Checkbox component
 const Checkbox = ({ id, ...props }) => (
@@ -129,7 +129,7 @@ const FinalCheckout = () => {
         }
       });
 
-      const response = await fetch('http://192.168.1.12:8000/api/orders/', {
+      const response = await fetch(`${BASE_URL}api/orders/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
