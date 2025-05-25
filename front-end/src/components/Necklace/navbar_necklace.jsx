@@ -241,10 +241,11 @@ const NavBar_Necklace = () => {
           <div className="hidden md:block hover:bg-[#fdfaf3] w-full md:px-[7rem]">
             <nav className="px-8 pb-[2rem] pt-[1rem] flex items-center justify-between">
               <div className="flex items-center">
-                <button className="flex items-center border rounded-full text-xs font-medium">
+                {/* <button className="flex items-center border rounded-full text-xs font-medium">
                   <span className="px-3 py-1 bg-white rounded-l-full text-[#302E2A]">EN</span>
                   <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full">ID</span>
-                </button>
+                </button> */}
+                <div className="p-[3rem]"></div>
               </div>
 
               <div className="flex-1 flex justify-center">
