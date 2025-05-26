@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -17,9 +18,17 @@ class Charm(models.Model):
         ('zodiac', 'Zodiac'),
     ]
 
+    LABEL_CHOICES = [
+        ('gold', 'Gold'),
+        ('silver', 'Silver'),
+        ('rose_gold', 'Rose Gold'),
+        ('null', 'Null'),
+    ]
+
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=50, choices=CHARM_CATEGORY_CHOICES)
     image = models.ImageField(upload_to='charms/')
+    label = models.CharField(max_length=100, choices=LABEL_CHOICES, default='null')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     description = models.TextField(blank=True, null=True)
@@ -34,8 +43,6 @@ class Charm(models.Model):
     def clean(self):
         if self.price is not None and self.price < 0:
             raise ValidationError("Harga charms tidak boleh negatif.")
-
-
 
 class Product(models.Model):
     CATEGORY_CHOICES = [
@@ -65,6 +72,7 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     sold_stok = models.IntegerField(default=0)
     discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    charms = models.BooleanField(default=False, help_text="Apakah produk ini memiliki charms?")
 
     # Produk di dalam gift set
     gift_set_products = models.ManyToManyField('self', blank=True, symmetrical=False)
@@ -164,3 +172,76 @@ class VideoContent(models.Model):
 
     def __str__(self):
         return self.title
+    
+class PageBanner(models.Model):
+    PAGE_CHOICES = [
+        ('homepage', 'Home Page'),
+        ('new_arrival', 'New Arrival'),
+        ('for_us', 'For Us'),
+        ('for_him', 'For Him'),
+        ('for_her', 'For Her'),
+        ('jewel_set', 'Jewel Set'),
+        ('charmbar', 'Charm Bar'),
+        ('charms', 'Charms'),
+        ('necklace', 'Necklace'),
+        ('bracelet', 'Bracelet'),
+        ('earrings', 'Earrings'),
+        ('rings', 'Rings'),
+        ('anklets', 'Anklets'),
+        ('gift_sets', 'Gift Sets'),
+    ]
+
+    page = models.CharField(max_length=30, choices=PAGE_CHOICES, unique=True)
+    image = models.ImageField(upload_to='banners/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_page_display()} Banner"
+    
+class PhotoGallery(models.Model):
+    alt_text = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    image = models.ImageField(upload_to='photo_gallery/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.alt_text
+    
+    def clean(self):
+        if not self.image:
+            raise ValidationError("Gambar harus diunggah untuk galeri foto.")
+        if not self.alt_text:
+            raise ValidationError("Judul/Alternative Text harus diisi untuk galeri foto.")
+
+class DiscountCampaign(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+
+    def __str__(self):
+        return self.name
+
+    def is_active(self):
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time
+
+class DiscountedItem(models.Model):
+    DISCOUNT_TYPE_CHOICES = [
+        ('percent', 'Percentage (%)'),
+        ('amount', 'Fixed Amount (Rp)')
+    ]
+
+    campaign = models.ForeignKey(DiscountCampaign, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='discounts')
+    discount_type = models.CharField(max_length=10, choices=DISCOUNT_TYPE_CHOICES)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.product.name} in {self.campaign.name}"
+
+    def clean(self):
+        if self.discount_type == 'percent' and (self.discount_value < 0 or self.discount_value > 100):
+            raise ValidationError("Diskon persentase harus antara 0-100%.")
+        if self.discount_type == 'amount' and self.discount_value < 0:
+            raise ValidationError("Diskon nominal tidak boleh negatif.")

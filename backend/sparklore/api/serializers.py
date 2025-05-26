@@ -1,17 +1,62 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Charm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent
+from .models import Charm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
+from django.core.mail import send_mail
+User = get_user_model()
+from django.conf import settings
+import textwrap
+from django.core.exceptions import ValidationError
+
+User = get_user_model()
 
 class NewsletterSubscriberSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source='user.email', read_only=True)
+    email = serializers.EmailField(write_only=True)  
+    user_email = serializers.SerializerMethodField() 
+    subscribed_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = NewsletterSubscriber
-        fields = '__all__'
+        fields = ['email', 'user_email', 'subscribed_at']
+
+    def get_user_email(self, obj):
+        return obj.user.email
 
     def validate_email(self, value):
-        if NewsletterSubscriber.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email sudah terdaftar.")
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Email tidak ditemukan. Silakan login terlebih dahulu.")
+
+        if NewsletterSubscriber.objects.filter(user=user).exists():
+            raise serializers.ValidationError("Email sudah terdaftar sebagai subscriber.")
+        
+        self.user = user
         return value
+
+    def create(self, validated_data):
+        user = self.user  
+
+        subscriber = NewsletterSubscriber.objects.create(user=user)
+
+        message = textwrap.dedent(f"""\
+            Hi {user.first_name or user.email},
+
+            Thank you for subscribing to the Sparklore newsletter!
+
+            We’re excited to share updates, offers, and more with you.
+
+            - Sparklore Team
+        """)
+
+        send_mail(
+            subject="Selamat Bergabung di Newsletter Sparklore",
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
+        return subscriber
 
 class CharmSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,8 +77,21 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image_url', 'alt_text']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if obj.image else None
+
+
 class ProductSerializer(serializers.ModelSerializer):
     gift_set_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
+    images = ProductImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -55,12 +113,6 @@ class ProductSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Field gift_set_products hanya boleh diisi untuk kategori 'gift_set'.")
             
         return data
-    
-    def get_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
-            return request.build_absolute_uri(obj.image.url)
-        return None
 
 class ReviewSerializer(serializers.ModelSerializer):
     products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all())
@@ -108,3 +160,33 @@ class VideoContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = VideoContent
         fields = '__all__'
+
+class PageBannerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PageBanner
+        fields = ['page', 'image_url']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if obj.image else None
+
+class PhotoGalerySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PhotoGallery
+        fields = ['id', 'image', 'alt_text']
+
+class DiscountedItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer()
+
+    class Meta:
+        model = DiscountedItem
+        fields = ['product', 'discount_type', 'discount_value']
+
+class DiscountCampaignSerializer(serializers.ModelSerializer):
+    items = DiscountedItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DiscountCampaign
+        fields = ['id', 'name', 'description', 'start_time', 'end_time', 'items']

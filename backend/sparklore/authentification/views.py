@@ -8,6 +8,8 @@ from .serializers import EmailLoginRequestSerializer, OTPVerifySerializer, UserS
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
 from django.conf import settings
+import textwrap
+
 
 User = get_user_model()
 
@@ -29,9 +31,25 @@ class RequestOTPView(APIView):
             code = OTPCode.generate_otp()
             OTPCode.objects.create(email=email, code=code)
 
+            message = textwrap.dedent(f"""\
+                Hi {email},
+
+                Here is your OTP code:
+
+                    {code}
+
+                This code is valid for 5 minutes.
+                Do not share this code with anyone, including anyone claiming to be from Sparklore.
+
+                If you did not request this code, please ignore this email.
+
+                Thank you,
+                Sparklore Team
+            """)
+
             send_mail(
-                subject="Login OTP",
-                message=f"Kode OTP Anda: {code} (berlaku 5 menit)",
+                subject="Your OTP Code – Sparklore",
+                message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=False,

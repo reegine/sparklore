@@ -1,14 +1,16 @@
+from datetime import timezone
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Charm, NewsletterSubscriber, Review, Product, Cart, CartItem, Order, VideoContent #Payment
+from .models import Charm, DiscountCampaign, NewsletterSubscriber, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
 from .serializers import (
-    CharmSerializer, ProductSerializer,
+    CharmSerializer, DiscountCampaignSerializer, ProductSerializer,
     CartSerializer, CartItemSerializer,
     OrderSerializer, NewsletterSubscriberSerializer,
-    ReviewSerializer, VideoContentSerializer #PaymentSerializer
+    ReviewSerializer, VideoContentSerializer,
+    PageBannerSerializer, PhotoGalerySerializer #PaymentSerializer
 )
 # from .services import MidtransService, RajaOngkirService
 from django.db import transaction
@@ -151,3 +153,22 @@ class VideoContentViewSet(viewsets.ModelViewSet):
     queryset = VideoContent.objects.all()
     serializer_class = VideoContentSerializer
     permission_classes = [AllowAny]
+
+class PageBannerViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PageBanner.objects.all()
+    serializer_class = PageBannerSerializer
+    permission_classes = [AllowAny]
+
+class PhotoGalleryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PhotoGallery.objects.all()
+    serializer_class = PhotoGalerySerializer
+    permission_classes = [AllowAny]
+
+class DiscountCampaignViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DiscountCampaign.objects.all()
+    serializer_class = DiscountCampaignSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        now = timezone.now()
+        return DiscountCampaign.objects.filter(start_time__lte=now, end_time__gte=now)
