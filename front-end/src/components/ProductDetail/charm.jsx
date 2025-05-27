@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronDown } from "lucide-react";
 import clsx from "clsx";
-import { BASE_URL, fetchProduct, fetchAllCharms } from "../../utils/api";
+import { BASE_URL, fetchProduct, fetchAllCharms, isLoggedIn } from "../../utils/api";
 
 // Function to format numbers as Indonesian Rupiah
 const formatIDR = (amount) => {
@@ -28,6 +28,23 @@ const ProductDetailCharmBar = () => {
   const [openCategory, setOpenCategory] = useState(null);
   const [charmsData, setCharmsData] = useState([]);
   const [charmLoading, setCharmLoading] = useState(true);
+
+  // Login popup state
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isLoggedInState, setIsLoggedInState] = useState(false);
+
+  // Check login state on mount and when auth changes
+  useEffect(() => {
+    setIsLoggedInState(isLoggedIn());
+    // Listen for storage changes for login state
+    const handleStorageChange = (e) => {
+      if (e.key === 'authData') {
+        setIsLoggedInState(isLoggedIn());
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -175,6 +192,20 @@ const ProductDetailCharmBar = () => {
     }
   };
 
+  // Add to cart button handler with login check
+  const handleAddToCart = () => {
+    if (!isLoggedIn()) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    // Place add-to-cart logic here...
+    // For now, maybe show a confirmation or snackbar.
+    alert("Added to cart! (Implement actual logic here)");
+  };
+
+  // Login Prompt Handler
+  const handleCloseLoginPrompt = () => setShowLoginPrompt(false);
+
   if (loading || charmLoading) {
     return (
       <div className="bg-[#faf7f0] min-h-screen flex justify-center items-center">
@@ -209,8 +240,37 @@ const ProductDetailCharmBar = () => {
   const groupedCharms = groupCharmsByCategory();
 
   return (
-    <div className="bg-[#faf7f0] min-h-screen">
-      <div className="font-sans px-6 py-12 max-w-6xl mx-auto">
+    <div className="bg-[#fdf9f0] py-[2rem]">
+      {/* Login Prompt Popup */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Login Required</h3>
+              <p className="text-gray-600 mb-6">
+                You need to be logged in to add items to your cart.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleCloseLoginPrompt}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                  onClick={handleCloseLoginPrompt}
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="font-sans px-6 pt-10 max-w-6xl mx-auto">
         {/* Pick charm count */}
         <h2 className="text-2xl font-serif font-semibold mb-4">CUSTOMIZE YOUR CHARM</h2>
         <div className="flex flex-wrap gap-2 mb-6">
@@ -300,7 +360,10 @@ const ProductDetailCharmBar = () => {
               ))}
             </div>
 
-            <button className="w-full bg-[#e6d5a7] text-center py-2 rounded mb-4 font-medium">
+            <button
+              className="w-full bg-[#e6d5a7] text-center py-2 rounded mb-4 font-medium"
+              onClick={handleAddToCart}
+            >
               Add to cart
             </button>
 

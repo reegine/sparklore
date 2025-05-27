@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import clsx from "clsx";
-import { BASE_URL } from "../../utils/api.js";
+import { BASE_URL, isLoggedIn } from "../../utils/api.js";
 
 // BASE IMAGES
 import baseNecklace from "../../assets/default/basenecklace.png";
@@ -23,6 +23,23 @@ const ProductDetailCharm = () => {
   const [showNote, setShowNote] = useState(false);
   const [note, setNote] = useState('');
   const [discountItem, setDiscountItem] = useState(null);
+
+  // Login popup state
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isLoggedInState, setIsLoggedInState] = useState(false);
+
+  // Check login state on mount and when auth changes
+  useEffect(() => {
+    setIsLoggedInState(isLoggedIn());
+    // Listen for storage changes for login state
+    const handleStorageChange = (e) => {
+      if (e.key === 'authData') {
+        setIsLoggedInState(isLoggedIn());
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     const fetchCharmAndDiscount = async () => {
@@ -60,7 +77,12 @@ const ProductDetailCharm = () => {
     fetchCharmAndDiscount();
   }, [productId]);
 
+  // Handler for Add to Cart (checks login)
   const handleAddToCart = () => {
+    if (!isLoggedIn()) {
+      setShowLoginPrompt(true);
+      return;
+    }
     setShowPopup(true);
     setShowCharms(true);
   };
@@ -75,6 +97,9 @@ const ProductDetailCharm = () => {
     setShowPopup(false);
     // Submit note here if needed
   };
+
+  // Login Prompt Handler
+  const handleCloseLoginPrompt = () => setShowLoginPrompt(false);
 
   if (loading) {
     return (
@@ -132,6 +157,35 @@ const ProductDetailCharm = () => {
 
   return (
     <div className='bg-[#faf7f0] relative'>
+      {/* Login Prompt Popup */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Login Required</h3>
+              <p className="text-gray-600 mb-6">
+                You need to be logged in to add items to your cart.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleCloseLoginPrompt}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                  onClick={handleCloseLoginPrompt}
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Popup Overlay */}
       {showPopup && (
         <>
