@@ -215,22 +215,36 @@ const ProductDetail = () => {
         </div>
 
         {/* Add to Cart Button */}
-        <div className="mt-10 md:block hidden">
+        <div className="mt-10 md:flex hidden">
           <button 
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`w-[53%] px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
+            disabled={charm.stock === 0}
+            className={`w-[26.5%] mx-3 px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
           >
-            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+            {charm.stock === 0 ? 'Out of Stock' : 'Customize'}
+          </button>
+          <button 
+            onClick={handleAddToCart}
+            disabled={charm.stock === 0}
+            className={`w-[26.5%] px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#ffffff00] border-2 border-[#f6e3b8] hover:opacity-90 hover:bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition`}
+          >
+            {charm.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </button>
         </div>
         <div className="mt-6 md:hidden order-4">
           <button 
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`w-full px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
+            disabled={charm.stock === 0}
+            className={`w-[26.5%] px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
           >
-            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+            {charm.stock === 0 ? 'Out of Stock' : 'Customize'}
+          </button>
+          <button 
+            onClick={handleAddToCart}
+            disabled={charm.stock === 0}
+            className={`w-[26.5%] px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#ffffff00] border-2 border-[#f6e3b8] hover:opacity-90 hover:bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition`}
+          >
+            {charm.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </button>
         </div>
       </div>

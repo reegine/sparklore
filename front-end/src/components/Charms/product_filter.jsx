@@ -46,7 +46,7 @@ const ProductGrid = () => {
   }, []);
 
   const handleProductClick = (productId) => {
-    navigate(`/products/${productId}`);
+    navigate(`/products-charm/${productId}`);
   };
 
   

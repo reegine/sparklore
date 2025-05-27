@@ -22,7 +22,7 @@ export default function DetailPageCharm() {
       <NavBar/>
       <ProductDetailCharm productId={productId} />
       <InfoAccordion/>
-      <ProductDetailCharmBar/>
+      {/* <ProductDetailCharmBar/> */}
       <Recommend/>
       <Features/>
       <VideoCarousel/>

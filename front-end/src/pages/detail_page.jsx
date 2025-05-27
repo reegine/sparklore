@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Footer from '../components/footer.jsx';
 import NavBar from '../components/Home/navbar.jsx';
 import ProductDetail from '../components/ProductDetail/product_detail.jsx';
+import ProductDetailCharmBar from '../components/ProductDetail/charm.jsx';
 import InfoAccordion from '../components/ProductDetail/dropdown.jsx';
 import Recommend from '../components/ProductDetail/recommend.jsx';
 import Features from '../components/Home/home_pt4.jsx';
@@ -21,6 +22,7 @@ export default function DetailPage() {
       <NavBar/>
       <ProductDetail productId={productId} />
       <InfoAccordion/>
+      <ProductDetailCharmBar  productId={productId} />
       <Recommend/>
       <Features/>
       <VideoCarousel/>
