@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Charm, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm, ProductImage, VideoContent, PageBanner, PhotoGallery, DiscountCampaign
+from .models import Charm, DiscountedItem, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm, ProductImage, VideoContent, PageBanner, PhotoGallery, DiscountCampaign
 
 @admin.register(Charm)
 class CharmAdmin(admin.ModelAdmin):
@@ -81,7 +81,18 @@ class PhotoGalleryAdmin(admin.ModelAdmin):
     list_display = ('alt_text','image', 'description', 'uploaded_at')
     search_fields = ['description']
 
+class DiscountedItemInline(admin.TabularInline):
+    model = DiscountedItem
+    extra = 1
+
 @admin.register(DiscountCampaign)
 class DiscountCampaignAdmin(admin.ModelAdmin):
-    list_display = ('name','description', 'start_time', 'end_time')
+    list_display = ('name', 'description', 'start_time', 'end_time')
     search_fields = ['name']
+    inlines = [DiscountedItemInline]
+
+@admin.register(DiscountedItem)
+class DiscountedItemAdmin(admin.ModelAdmin):
+    list_display = ('product', 'campaign', 'discount_type', 'discount_value')
+    list_filter = ('discount_type', 'campaign')
+    search_fields = ['product__name']

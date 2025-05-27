@@ -25,10 +25,10 @@ class NewsletterSubscriberSerializer(serializers.ModelSerializer):
         try:
             user = User.objects.get(email=value)
         except User.DoesNotExist:
-            raise serializers.ValidationError("Email tidak ditemukan. Silakan login terlebih dahulu.")
+            raise serializers.ValidationError("Email not found. Please login first")
 
         if NewsletterSubscriber.objects.filter(user=user).exists():
-            raise serializers.ValidationError("Email sudah terdaftar sebagai subscriber.")
+            raise serializers.ValidationError("Email has been registered.")
         
         self.user = user
         return value
@@ -49,7 +49,7 @@ class NewsletterSubscriberSerializer(serializers.ModelSerializer):
         """)
 
         send_mail(
-            subject="Selamat Bergabung di Newsletter Sparklore",
+            subject="Welcome to the Sparklore Newsletter",
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
@@ -123,7 +123,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate_products(self, value):
         if len(value) == 0:
-            raise serializers.ValidationError("Minimal 1 produk harus direview.")
+            raise serializers.ValidationError("Must review at least 1 product")
         return value
 
 
