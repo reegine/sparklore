@@ -9,8 +9,13 @@ import baseNecklace from "../../assets/default/basenecklace.png";
 
 // Function to format numbers as Indonesian Rupiah
 const formatIDR = (amount) => {
-  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(Math.round(amount));
 };
+
 
 export default function CharmCustomizerFull() {
   const necklaceRef = useRef(null);
@@ -57,13 +62,31 @@ export default function CharmCustomizerFull() {
     fetchData();
   }, []);
 
-  // Filter products by category
+  // Helper function to get the last image URL from a product
+  const getLastProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      // Get the last image in the array
+      return product.images[product.images.length - 1].image_url;
+    }
+    return '../../assets/default/banner_home.jpeg';
+  };
+
+  // Helper function to get the first image URL from a product
+  const getFirstProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0].image_url;
+    }
+    return '../../assets/default/banner_home.jpeg';
+  };
+
+  // Filter products by category and charms:true
   const filterProductsByCategory = (category) => {
     return productsData
-      .filter(product => product.category === category)
+      .filter(product => product.category === category && product.charms === true)
       .map(product => ({
         id: product.id,
-        img: product.image,
+        img: getFirstProductImage(product), // Use first image
+        lastImg: getLastProductImage(product), // Use last image
         text: product.name,
         price: parseFloat(product.price),
         stock: product.stock,
@@ -85,7 +108,7 @@ export default function CharmCustomizerFull() {
 
   const handleBaseProductSelect = (product) => {
     setSelectedBaseProduct(product);
-    setBaseImage(product.img);
+    setBaseImage(product.lastImg); // This will be the last image already
   };
 
   const scroll = (ref, direction) => {
@@ -120,6 +143,10 @@ export default function CharmCustomizerFull() {
         src={product.img} 
         alt={product.text} 
         className={`w-[15rem] h-[15rem] object-cover shadow-md rounded ${product.stock === 0 ? 'grayscale' : ''}`} 
+        onError={(e) => {
+          e.target.onerror = null; // Prevent infinite loop
+          e.target.src = '../../assets/default/banner_home.jpeg'; // Fallback image
+        }}
       />
       
       {product.stock === 0 ? (
@@ -241,48 +268,65 @@ export default function CharmCustomizerFull() {
   const bracelets = filterProductsByCategory('bracelet');
   const recommend = [...necklaces.slice(0, 3), ...bracelets.slice(0, 2)];
 
+  // Check if we should show necklace or bracelet sections
+  const showNecklaces = necklaces.length > 0;
+  const showBracelets = bracelets.length > 0;
+
+  // Calculate total price
+  const calculateTotalPrice = () => {
+  let total = parseFloat(selectedBaseProduct?.price) || 0;
+  for (let i = 1; i <= charmCount; i++) {
+    const charmPrice = parseFloat(selectedCharms[i]?.price);
+    if (!isNaN(charmPrice)) {
+      total += charmPrice;
+    }
+  }
+  return total;
+};
+
+
   return (
     <div className="bg-[#f9f5ef] min-h-screen">
       <div className="font-sans px-6 py-12 max-w-6xl mx-auto">
 
-        {/* NECKLACES */}
-        <h2 className="text-2xl font-serif font-semibold mb-6">SELECT A NECKLACE (OPTIONAL)</h2>
-        {necklaces.length > 0 ? (
-          <div className="relative mb-10">
-            <button onClick={() => scroll(necklaceRef, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2">
-              <ChevronLeft size={28} />
-            </button>
-            <div ref={necklaceRef} className="flex gap-4 overflow-x-auto ml-12 mr-12 pb-2 no-scrollbar">
-              {necklaces.map((product) => (
-                <BaseProductItem product={product} key={product.id} />
-              ))}
+        {/* NECKLACES - Only show if there are necklaces with charms:true */}
+        {showNecklaces && (
+          <>
+            <h2 className="text-2xl font-serif font-semibold mb-6">SELECT A NECKLACE (OPTIONAL)</h2>
+            <div className="relative mb-10">
+              <button onClick={() => scroll(necklaceRef, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2">
+                <ChevronLeft size={28} />
+              </button>
+              <div ref={necklaceRef} className="flex gap-4 overflow-x-auto ml-12 mr-12 pb-2 no-scrollbar">
+                {necklaces.map((product) => (
+                  <BaseProductItem product={product} key={product.id} />
+                ))}
+              </div>
+              <button onClick={() => scroll(necklaceRef, "right")} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2">
+                <ChevronRight size={28} />
+              </button>
             </div>
-            <button onClick={() => scroll(necklaceRef, "right")} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2">
-              <ChevronRight size={28} />
-            </button>
-          </div>
-        ) : (
-          <p className="text-center py-8">No necklaces available</p>
+          </>
         )}
 
-        {/* BRACELETS */}
-        <h2 className="text-2xl font-serif font-semibold mt-12 mb-6">OR SELECT A BRACELET (OPTIONAL)</h2>
-        {bracelets.length > 0 ? (
-          <div className="relative mb-10">
-            <button onClick={() => scroll(braceletRef, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2">
-              <ChevronLeft size={28} />
-            </button>
-            <div ref={braceletRef} className="flex gap-4 overflow-x-auto ml-12 mr-12 pb-2 no-scrollbar">
-              {bracelets.map((product) => (
-                <BaseProductItem product={product} key={product.id} />
-              ))}
+        {/* BRACELETS - Only show if there are bracelets with charms:true */}
+        {showBracelets && (
+          <>
+            <h2 className="text-2xl font-serif font-semibold mt-12 mb-6">OR SELECT A BRACELET (OPTIONAL)</h2>
+            <div className="relative mb-10">
+              <button onClick={() => scroll(braceletRef, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2">
+                <ChevronLeft size={28} />
+              </button>
+              <div ref={braceletRef} className="flex gap-4 overflow-x-auto ml-12 mr-12 pb-2 no-scrollbar">
+                {bracelets.map((product) => (
+                  <BaseProductItem product={product} key={product.id} />
+                ))}
+              </div>
+              <button onClick={() => scroll(braceletRef, "right")} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2">
+                <ChevronRight size={28} />
+              </button>
             </div>
-            <button onClick={() => scroll(braceletRef, "right")} className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2">
-              <ChevronRight size={28} />
-            </button>
-          </div>
-        ) : (
-          <p className="text-center py-8">No bracelets available</p>
+          </>
         )}
 
         {/* CUSTOMIZER - Always shown */}
@@ -363,7 +407,7 @@ export default function CharmCustomizerFull() {
 
           <div className="flex-1">
             <div className="text-2xl font-semibold mb-4">
-              Rp {formatIDR(139999 + (charmCount - 1) * 25000)}
+              {formatIDR(calculateTotalPrice())}
             </div>
 
             <div className="flex gap-2 mb-4">

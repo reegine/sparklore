@@ -319,32 +319,31 @@ export const checkProductInCart = async (productId) => {
 };
 
 
-export const subscribeToNewsletter = async () => {
-  const authData = getAuthData();
-  if (!authData) throw new Error('User not authenticated');
-
+export const subscribeToNewsletter = async (email) => {
   try {
     const response = await fetch(`${BASE_URL}/api/newsletters/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authData.token}`
       },
-      body: JSON.stringify({ user: authData.user.id }),
+      body: JSON.stringify({ email }),
     });
 
     const data = await response.json();
 
-    if (response.status === 200 || response.status === 201) {
-      return { success: true, data };
+    if (!response.ok) {
+      // Handle 400 Bad Request with specific error message
+      if (response.status === 400 && data.email) {
+        return { 
+          error: true,
+          message: data.email[0] || "Email already subscribed",
+          alreadySubscribed: true 
+        };
+      }
+      throw new Error(data.message || 'Failed to subscribe to newsletter');
     }
 
-    // Check if the error is due to already being subscribed
-    if (response.status === 400 && data.email && data.email.includes('already exists')) {
-      return { alreadySubscribed: true, data };
-    }
-
-    throw new Error(data.message || 'Failed to subscribe to newsletter');
+    return { success: true, data };
   } catch (error) {
     console.error('Newsletter subscription error:', error);
     throw error;
@@ -371,4 +370,44 @@ export const fetchAllCharms = async () => {
     discount: parseFloat(charm.discount || 0),
     rating: parseFloat(charm.rating || 0)
   }));
+};
+
+// Function to fetch the banner image for a specific page
+export const fetchPageBanner = async (page) => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/page-banners/`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch page banners");
+    }
+    const data = await response.json();
+
+    // Find the banner for the specified page
+    const pageBanner = data.find(banner => banner.page === page);
+    if (pageBanner) {
+      return pageBanner.image_url; // Return the image URL
+    } else {
+      throw new Error(`No banner found for page: ${page}`);
+    }
+  } catch (error) {
+    console.error("Error fetching page banner:", error);
+    throw error; // Rethrow the error for handling in the component
+  }
+};
+
+// Function to fetch the most recent 6 images from the photo gallery
+export const fetchRecentGalleryImages = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/photo-gallery/`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch photo gallery images");
+    }
+    const data = await response.json();
+
+    // Get the most recent 6 images
+    const recentImages = data.slice(-6); // Assuming the API returns images in chronological order
+    return recentImages; // Return the array of recent images
+  } catch (error) {
+    console.error("Error fetching recent gallery images:", error);
+    throw error; // Rethrow the error for handling in the component
+  }
 };

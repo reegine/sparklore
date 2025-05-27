@@ -14,6 +14,14 @@ const HomePart2 = () => {
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
+  // Helper function to get the first image URL from a product
+  const getFirstProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0].image_url;
+    }
+    return '../../assets/default/banner_home.jpeg';
+  };
+
   // Fetch discounted products from API
   useEffect(() => {
     const fetchDiscountedProducts = async () => {
@@ -40,7 +48,7 @@ const HomePart2 = () => {
             rating: parseFloat(product.rating) || 0,
             price: `Rp ${discountedPrice.toLocaleString('id-ID', {maximumFractionDigits: 2})}`, // Discounted price
             originalPrice: `Rp ${originalPrice.toLocaleString('id-ID')}`, // Original price
-            image: product.image,
+            image: getFirstProductImage(product),
             stock: product.stock,
             soldStock: product.sold_stok || 0,
             discount: discountPercentage
@@ -137,6 +145,10 @@ const HomePart2 = () => {
                   src={product.image}
                   alt={product.name}
                   className={`rounded-lg w-full h-auto object-cover ${product.stock === 0 ? 'grayscale' : ''}`}
+                  onError={(e) => {
+                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.src = '../../assets/default/banner_home.jpeg'; // Fallback image
+                }}
                 />
                 
                 {/* Stock Status Badge */}

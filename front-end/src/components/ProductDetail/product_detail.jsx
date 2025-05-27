@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { BASE_URL } from "../../utils/api.js";
 
-
 const ProductDetail = () => {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
@@ -16,24 +15,30 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-    try {
-      const response = await fetch(`${BASE_URL}/api/products/${productId}/`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch product');
+      try {
+        const response = await fetch(`${BASE_URL}/api/products/${productId}/`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch product');
+        }
+        const data = await response.json();
+        // Ensure charms_detail exists as an array
+        if (!data.charms_detail) {
+          data.charms_detail = [];
+        }
+        setProduct(data);
+        // Set the first image as main image if available
+        if (data.images && data.images.length > 0) {
+          setMainImage(data.images[0].image_url);
+        } else {
+          // Fallback to a default image if no images are available
+          setMainImage('/path/to/default/image.png');
+        }
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
       }
-      const data = await response.json();
-      // Ensure charms_detail exists as an array
-      if (!data.charms_detail) {
-        data.charms_detail = [];
-      }
-      setProduct(data);
-      setMainImage(data.image);
-      setLoading(false);
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
+    };
 
     fetchProduct();
   }, [productId]);
@@ -78,12 +83,14 @@ const ProductDetail = () => {
     );
   }
 
-  // Create thumbnails array including main image and any additional images
-  const thumbnails = [product.image, ...(product.additional_images || [])];
+  // Create thumbnails array from product.images
+  const thumbnails = product.images && product.images.length > 0 
+    ? product.images.map(img => img.image_url) 
+    : [];
 
   return (
     <div className='bg-[#faf7f0] relative'>
-      {/* Popup Overlay (same as before) */}
+      {/* Popup Overlay */}
       {showPopup && (
         <>
           {showCharms && (
@@ -148,17 +155,23 @@ const ProductDetail = () => {
 
         <div className="flex flex-col md:flex-row gap-10">
           {/* Thumbnail Images */}
-          <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-visible pb-2 order-2 md:order-1">
-            {thumbnails.map((src, idx) => (
-              <img
-                key={idx}
-                src={src}
-                alt={`Thumbnail ${idx + 1}`}
-                onClick={() => setMainImage(src)}
-                className="flex-shrink-0 w-16 h-16 object-cover rounded cursor-pointer border border-gray-200 hover:border-gray-400 transition"
-              />
-            ))}
-          </div>
+          {thumbnails.length > 0 && (
+            <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-visible pb-2 order-2 md:order-1">
+              {thumbnails.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt={product.images[idx]?.alt_text || `Thumbnail ${idx + 1}`}
+                  onClick={() => setMainImage(src)}
+                  className="flex-shrink-0 w-16 h-16 object-cover rounded cursor-pointer border border-gray-200 hover:border-gray-400 transition"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/path/to/default/image.png';
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Main Product Image */}
           <div className="flex-1 order-1 md:order-2">
@@ -166,6 +179,10 @@ const ProductDetail = () => {
               src={mainImage}
               alt={product.name}
               className="w-full max-w-lg rounded-lg shadow-md"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/path/to/default/image.png';
+              }}
             />
           </div>
 

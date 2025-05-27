@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { isLoggedIn, addToCart, BASE_URL } from "../../utils/api";
 import Snackbar from '../snackbar.jsx';
 
@@ -13,6 +13,14 @@ const HomePart3 = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // Helper function to get the first image URL from a product
+  const getFirstProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0].image_url;
+    }
+    return '../../assets/default/banner_home.jpeg';
+  };
 
   // Fetch products from API
   useEffect(() => {
@@ -33,7 +41,7 @@ const HomePart3 = () => {
             rating: parseFloat(product.rating) || 0,
             price: `Rp ${parseFloat(product.price).toLocaleString('id-ID')}`,
             oldPrice: null,
-            image: product.image,
+            image: getFirstProductImage(product), // Use the first available image
             stock: product.stock,
             soldStock: product.sold_stok || 0
           }))
@@ -107,6 +115,10 @@ const HomePart3 = () => {
                 src={product.image}
                 alt={product.name}
                 className={`rounded-lg w-full h-auto object-cover ${product.stock === 0 ? 'grayscale' : ''}`}
+                onError={(e) => {
+                  e.target.onerror = null; // Prevent infinite loop
+                  e.target.src = '../../assets/default/banner_home.jpeg'; // Fallback image
+                }}
               />
               
               {/* Stock Status Badge */}

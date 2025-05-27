@@ -11,6 +11,14 @@ const Reviews = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showRatingBreakdown, setShowRatingBreakdown] = useState(false);
 
+  // Helper function to get the first product image
+  const getFirstProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0].image_url;
+    }
+    return '/path/to/default/image.png'; // Replace with your actual default image path
+  };
+
   // Calculate rating statistics
   const calculateRatingStats = () => {
     const stats = {
@@ -76,14 +84,14 @@ const Reviews = () => {
             productDetailsMap[productId] = {
               name: product.name,
               type: product.label.toUpperCase(),
-              image: product.image
+              image: getFirstProductImage(product) // Use the first available image
             };
           } catch (err) {
             console.error(`Error fetching product ${productId}:`, err);
             productDetailsMap[productId] = {
               name: "Unknown Product",
               type: "UNKNOWN",
-              image: ""
+              image: "/path/to/default/image.png" // Fallback image
             };
           }
         }
@@ -201,11 +209,17 @@ const Reviews = () => {
             className="bg-[#faf7f0] p-4 rounded-xl shadow-lg break-inside-avoid mb-6"
           >
             {/* Review Image */}
-            <img
-              src={review.image}
-              alt={review.user_name}
-              className="w-full h-64 object-cover rounded-md"
-            />
+            {review.image && (
+              <img
+                src={review.image}
+                alt={review.user_name}
+                className="w-full h-64 object-cover rounded-md"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/path/to/default/image.png';
+                }}
+              />
+            )}
 
             {/* Review Content */}
             <div className="mt-4 px-2">
@@ -229,7 +243,7 @@ const Reviews = () => {
                   const product = productDetails[productId] || {
                     name: "Unknown Product",
                     type: "UNKNOWN",
-                    image: ""
+                    image: "/path/to/default/image.png"
                   };
                   
                   return (
@@ -238,6 +252,10 @@ const Reviews = () => {
                         src={product.image}
                         alt={product.name}
                         className="w-20 h-20 rounded-md object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/path/to/default/image.png';
+                        }}
                       />
                       <div>
                         <p className="text-gray-800 font-medium mb-2">{product.name}</p>

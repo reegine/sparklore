@@ -1,14 +1,33 @@
-import banner from "../../assets/default/banner_home.jpeg";
+import React, { useState, useEffect } from "react";
+import { fetchPageBanner } from "../../utils/api.js";
 
 const BannerHome = () => {
+  const [bannerImage, setBannerImage] = useState("");
+
+  // Fetch the banner image for the homepage
+  useEffect(() => {
+    const getBannerImage = async () => {
+      try {
+        const imageUrl = await fetchPageBanner("homepage"); // Fetch banner for homepage
+        setBannerImage(imageUrl);
+      } catch (error) {
+        console.error("Error fetching banner image:", error);
+        // Optionally set a default image in case of an error
+        setBannerImage("../../assets/default/banner_home.jpeg"); // Replace with your actual default image path
+      }
+    };
+
+    getBannerImage();
+  }, []);
+
   return (
     <>
       {/* Hero Section with Text Overlay */}
       <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
-        {/* Background Image - Using your imported image */}
+        {/* Background Image - Using the fetched image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${banner})` }}
+          style={{ backgroundImage: `url(${bannerImage})` }}
         >
           <div className="absolute inset-0 bg-black/40"></div>{" "}
           {/* Overlay for better text visibility */}
@@ -23,10 +42,6 @@ const BannerHome = () => {
             Create, customize, and cherish—crafted just for you. SparkLore
             brings your unique style to life, one charm at a time.
           </p>
-
-          {/* <button className="mt-8 px-8 py-3 bg-[#b87777] hover:bg-[#9a5f5f] text-white font-medium rounded-full transition-colors duration-300">
-            Start Creating
-          </button> */}
         </div>
       </div>
     </>

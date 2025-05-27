@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import banner from "../../assets/default/navbar_anklets_bg.png";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
-import { isLoggedIn, logout, getAuthData } from "../../utils/api.js";
+import { isLoggedIn, logout, getAuthData, fetchPageBanner } from "../../utils/api.js";
 import Snackbar from '../snackbar.jsx';
 
 const NavBar_Anklets = () => {
@@ -19,6 +19,8 @@ const NavBar_Anklets = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [bannerImage, setBannerImage] = useState("");
+
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -54,6 +56,17 @@ const NavBar_Anklets = () => {
 
   useEffect(() => {
     setIsInitialLoad(false);
+    const getBannerImage = async () => {
+      try {
+        const imageUrl = await fetchPageBanner("anklets"); // Fetch banner for charmbar
+        setBannerImage(imageUrl);
+      } catch (error) {
+        console.error("Error fetching banner image:", error);
+        // Optionally set a default image in case of an error
+        setBannerImage(banner); // Replace with your actual default image path
+      }
+    };
+    getBannerImage();
 
     if (location.state?.showLoginSuccess) {
       // setSnackbarMessage('Successfully logged in');
@@ -237,7 +250,7 @@ const NavBar_Anklets = () => {
       <div className="relative w-full h-screen max-h-[20rem] md:max-h-[37rem]">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${banner})` }}
+          style={{ backgroundImage: `url(${bannerImage})` }} // Use fetched banner image
         >
           <div className="absolute inset-0 bg-black/30"></div>
         </div>

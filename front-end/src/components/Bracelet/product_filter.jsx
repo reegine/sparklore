@@ -25,6 +25,14 @@ export default function BraceletGrid() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+    // Helper function to get the first image URL from a product
+  const getFirstProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0].image_url;
+    }
+    return '../../assets/default/banner_home.jpeg';
+  };
+
   // Fetch products from API
   useEffect(() => {
     const fetchProducts = async () => {
@@ -45,7 +53,7 @@ export default function BraceletGrid() {
             price: `Rp ${parseFloat(product.price).toLocaleString('id-ID')}`,
             originalPrice: null,
             rating: parseFloat(product.rating) || 0,
-            image: product.image,
+            image: getFirstProductImage(product),
             stock: product.stock,
             soldStock: product.sold_stok || 0,
             createdAt: product.created_at || new Date().toISOString()
@@ -250,6 +258,10 @@ export default function BraceletGrid() {
                     className={`rounded-md w-full h-auto object-cover ${
                       product.stock === 0 ? 'grayscale' : ''
                     }`}
+                    onError={(e) => {
+                      e.target.onerror = null; // Prevent infinite loop
+                      e.target.src = '../../assets/default/banner_home.jpeg'; // Fallback image
+                    }}
                   />
                   
                   {/* Stock Status Badge */}

@@ -1,16 +1,36 @@
-import React from "react";
-
-// Import your images
-import img1 from "../../assets/default/homeproduct1.png";
-import img2 from "../../assets/default/homeproduct2.png";
-import img3 from "../../assets/default/homeproduct3.png";
-import img4 from "../../assets/default/homeproduct4.png";
-import img5 from "../../assets/default/homeproduct5.jpeg";
-import img6 from "../../assets/default/homeproduct6.jpeg";
-
-const images = [img1, img2, img3, img4, img5, img6];
+import React, { useState, useEffect } from "react";
+import { fetchRecentGalleryImages } from "../../utils/api.js"; // Import the fetch function
 
 const JewelryGallery = () => {
+  const [images, setImages] = useState([]); // State to hold fetched images
+  const [isLoading, setIsLoading] = useState(true); // State to manage loading state
+  const [error, setError] = useState(null); // State to manage error
+
+  // Fetch the most recent 6 images from the API
+  useEffect(() => {
+    const getImages = async () => {
+      try {
+        const recentImages = await fetchRecentGalleryImages(); // Fetch recent images
+        setImages(recentImages);
+      } catch (error) {
+        console.error("Error fetching images:", error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    getImages();
+  }, []);
+
+  if (isLoading) {
+    return <div className="text-center">Loading images...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">Error: {error}</div>;
+  }
+
   return (
     <div className="bg-[#f8f4ed] py-14 px-6">
       {/* Title & Subtitle */}
@@ -25,11 +45,11 @@ const JewelryGallery = () => {
 
       {/* 3x2 Grid */}
       <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-4">
-        {images.map((image, index) => (
-          <div key={index} className="rounded-lg overflow-hidden">
+        {images.map((image) => (
+          <div key={image.id} className="rounded-lg overflow-hidden">
             <img
-              src={image}
-              alt={`Jewelry ${index + 1}`}
+              src={image.image}
+              alt={image.alt_text}
               className="w-full h-full object-cover"
             />
           </div>

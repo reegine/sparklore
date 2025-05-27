@@ -49,8 +49,9 @@ const Footer = () => {
       if (result.success) {
         showSnackbar("You are now subscribed to our newsletter!", "success");
         setEmail("");
-      } else if (result.alreadySubscribed) {
-        showSnackbar("This email is already subscribed to our newsletter", "info");
+      } else if (result.alreadySubscribed || result.error) {
+        // Show the specific error message from the API
+        showSnackbar(result.message || "This email is already subscribed to our newsletter", "info");
       } else {
         showSnackbar("Subscription successful", "success");
         setEmail("");

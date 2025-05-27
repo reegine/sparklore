@@ -12,6 +12,7 @@ const ProductGrid = () => {
   const [filters, setFilters] = useState({
     category: [],
     price: [],
+    material: [],
     discount: false, // New discount filter
   });
   const [charms, setCharms] = useState([]);
@@ -24,8 +25,14 @@ const ProductGrid = () => {
     const loadCharms = async () => {
       try {
         const data = await fetchAllCharms();
-        setCharms(data);
-        setFilteredCharms(data);
+        // Sort charms to prioritize gold items first
+        const sortedData = [...data].sort((a, b) => {
+          if (a.label === 'gold' && b.label !== 'gold') return -1;
+          if (a.label !== 'gold' && b.label === 'gold') return 1;
+          return 0;
+        });
+        setCharms(sortedData);
+        setFilteredCharms(sortedData);
         
         const uniqueCategories = [...new Set(data.map(charm => charm.category))];
         setCategories(uniqueCategories);
@@ -64,7 +71,8 @@ const ProductGrid = () => {
         rating: Math.round(charm.rating),
         image: charm.image,
         category: charm.category,
-        stock: charm.stock
+        stock: charm.stock,
+        material: charm.label,
       };
     });
   };
@@ -100,6 +108,11 @@ const ProductGrid = () => {
       filtered = filtered.filter(charm => filters.category.includes(charm.category));
     }
 
+    // Apply material filter
+    if (filters.material.length > 0) {
+      filtered = filtered.filter(charm => filters.material.includes(charm.label)); // Assuming 'label' contains material info
+    }
+
     // Apply discount filter
     if (filters.discount) {
       filtered = filtered.filter(charm => charm.discount > 0);
@@ -112,6 +125,13 @@ const ProductGrid = () => {
       filtered.sort((a, b) => b.price - a.price);
     }
 
+    // Maintain gold items priority even after other filters
+    filtered.sort((a, b) => {
+      if (a.label === 'gold' && b.label !== 'gold') return -1;
+      if (a.label !== 'gold' && b.label === 'gold') return 1;
+      return 0;
+    });
+
     setFilteredCharms(filtered);
     setCurrentPage(1);
   };
@@ -122,7 +142,7 @@ const ProductGrid = () => {
   };
 
   const resetFilters = () => {
-    setFilters({ category: [], price: [], discount: false });
+    setFilters({ category: [], price: [],  material: [], discount: false });
     setFilteredCharms(charms);
     setCurrentPage(1);
   };
@@ -297,7 +317,24 @@ const ProductGrid = () => {
               </div>
             </div>
 
-            <div className="space-y-4 text-sm text-[#403c39]">
+            <div>
+                <h3 className="font-semibold mb-1">Material</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {["gold", "silver", "rose_gold"].map((material) => (
+                    <label key={material} className="flex items-center gap-1 capitalize">
+                      <input
+                        type="checkbox"
+                        checked={isChecked("material", material)}
+                        onChange={() => toggleFilter("material", material)}
+                        className="accent-[#c3a46f]"
+                      />
+                      {material.replace(/_/g, ' ')}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+            <div className="space-y-4 text-sm text-[#403c39] mt-3">
               <div>
                 <h3 className="font-semibold mb-1">Category</h3>
                 <div className="grid grid-cols-2 gap-2">
