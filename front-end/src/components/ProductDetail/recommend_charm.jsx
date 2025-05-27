@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BASE_URL } from "../../utils/api.js";
-import { useNavigate } from "react-router-dom";
-
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 
 // Utility: Rupiah formatter
 const formatIDR = (amount) =>
@@ -12,9 +11,9 @@ const formatIDR = (amount) =>
     minimumFractionDigits: 0,
   }).format(Math.round(amount));
 
-const API_URL = `${BASE_URL}/api/products/`;
+const API_URL = `${BASE_URL}/api/charms/`; // Update to charm API
 
-const Recommend = ({ setBaseImage }) => {
+const RecommendCharm = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const recommendRef = useRef(null);
@@ -25,11 +24,11 @@ const Recommend = ({ setBaseImage }) => {
       setLoading(true);
       try {
         const res = await fetch(API_URL);
-        const products = await res.json();
+        const charms = await res.json();
 
-        // Filter: stock > 0, sort by sold_stok descending, take first image as preview
-        const sorted = products
-          .filter((product) => Number(product.stock) > 0)
+        // Filter: stock > 0, sort by sold_stok descending
+        const sorted = charms
+          .filter((charm) => Number(charm.stock) > 0)
           .sort((a, b) => Number(b.sold_stok) - Number(a.sold_stok));
 
         setRecommendations(sorted);
@@ -54,7 +53,7 @@ const Recommend = ({ setBaseImage }) => {
 
   return (
     <div className="bg-[#fdf9f0] ">
-      <div className="max-w-7xl mx-auto lg:pt-[-5rem] pb-[5rem]">
+      <div className="max-w-7xl mx-auto pt-[5rem] pb-[5rem]">
         <h2 className="text-2xl font-serif font-semibold mb-[2rem]">
           YOU MIGHT ALSO LIKE...
         </h2>
@@ -75,24 +74,14 @@ const Recommend = ({ setBaseImage }) => {
             ) : recommendations.length === 0 ? (
               <div className="text-center py-10 w-full">No recommendations.</div>
             ) : (
-              recommendations.map((item, i) => (
+              recommendations.map((item) => (
                 <div
                   key={item.id}
-                //   onClick={() =>
-                //     setBaseImage &&
-                //     item.images &&
-                //     item.images.length > 0 &&
-                //     setBaseImage(item.images[0].image_url)
-                   onClick={() => navigate(`/products/${item.id}`)
-                  }
+                  onClick={() => navigate(`/products-charm/${item.id}`)} // Navigate to charm detail page
                   className="relative group min-w-[15rem] cursor-pointer hover:scale-105 transition-transform"
                 >
                   <img
-                    src={
-                      item.images && item.images.length > 0
-                        ? item.images[0].image_url
-                        : "/default-image.png"
-                    }
+                    src={item.image}
                     alt={item.name}
                     className="w-[15rem] h-[15rem] object-cover shadow-md rounded"
                   />
@@ -104,9 +93,6 @@ const Recommend = ({ setBaseImage }) => {
                       {formatIDR(item.price)}
                     </span>
                   </div>
-                  {/* <div className="absolute bottom-2 right-2 bg-white bg-opacity-80 rounded text-xs px-2 py-1 font-semibold shadow">
-                    Sold: {item.sold_stok}
-                  </div> */}
                 </div>
               ))
             )}
@@ -124,4 +110,4 @@ const Recommend = ({ setBaseImage }) => {
   );
 };
 
-export default Recommend;
+export default RecommendCharm;

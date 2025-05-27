@@ -4,58 +4,65 @@ import { useNavigate, Link } from "react-router-dom";
 import { isLoggedIn, addToCart, BASE_URL } from "../../utils/api";
 import Snackbar from '../snackbar.jsx';
 
+// Helper: format IDR currency
+const formatIDR = (value) =>
+  "Rp " +
+  Number(value)
+    .toLocaleString("id-ID", { maximumFractionDigits: 2 })
+    .replace(/,/g, ".");
+
 const HomePart2 = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
+  const [campaign, setCampaign] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [countdown, setCountdown] = useState({ hours: "00", minutes: "00", seconds: "00" });
 
-  // Helper function to get the first image URL from a product
-  const getFirstProductImage = (product) => {
-    if (product.images && product.images.length > 0) {
-      return product.images[0].image_url;
-    }
-    return '../../assets/default/banner_home.jpeg';
-  };
-
-  // Fetch discounted products from API
+  // Calculate the countdown from now to end_time
   useEffect(() => {
-    const fetchDiscountedProducts = async () => {
-      try {
-        const response = await fetch(`${BASE_URL}/api/products/`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch products");
-        }
-        const data = await response.json();
-        
-        // Filter products with discount > 0 and transform data
-        const discountedProducts = data
-        .filter(product => parseFloat(product.discount) > 0)
-        .map(product => {
-          const originalPrice = parseFloat(product.price); // This is the original price from API
-          const discountPercentage = parseFloat(product.discount);
-          const discountAmount = originalPrice * (discountPercentage / 100);
-          const discountedPrice = originalPrice - discountAmount;
-          
-          return {
-            id: product.id,
-            name: product.name,
-            tag: product.label.toUpperCase(),
-            rating: parseFloat(product.rating) || 0,
-            price: `Rp ${discountedPrice.toLocaleString('id-ID', {maximumFractionDigits: 2})}`, // Discounted price
-            originalPrice: `Rp ${originalPrice.toLocaleString('id-ID')}`, // Original price
-            image: getFirstProductImage(product),
-            stock: product.stock,
-            soldStock: product.sold_stok || 0,
-            discount: discountPercentage
-          };
-        });
+    if (!campaign || !campaign.end_time) return;
 
-        setProducts(discountedProducts);
+    const endTime = new Date(campaign.end_time).getTime();
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const distance = endTime - now;
+      if (distance > 0) {
+        const hours = Math.floor((distance / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((distance / (1000 * 60)) % 60);
+        const seconds = Math.floor((distance / 1000) % 60);
+        setCountdown({
+          hours: String(hours).padStart(2, "0"),
+          minutes: String(minutes).padStart(2, "0"),
+          seconds: String(seconds).padStart(2, "0"),
+        });
+      } else {
+        setCountdown({ hours: "00", minutes: "00", seconds: "00" });
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [campaign]);
+
+  // Fetch discount campaign
+  useEffect(() => {
+    const fetchDiscountCampaign = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${BASE_URL}/api/discount-campaigns/`);
+        if (!response.ok) throw new Error("Failed to fetch discount campaign");
+        const data = await response.json();
+
+        // Find the currently running or upcoming campaign
+        const now = new Date();
+        const active = data.find((c) => new Date(c.end_time) > now && c.items && c.items.length > 0);
+        setCampaign(active || null);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -63,7 +70,7 @@ const HomePart2 = () => {
       }
     };
 
-    fetchDiscountedProducts();
+    fetchDiscountCampaign();
   }, []);
 
   const handleProductClick = (productId) => {
@@ -72,7 +79,6 @@ const HomePart2 = () => {
 
   const handleAddToCart = async (productId, e) => {
     e.stopPropagation();
-    
     if (!isLoggedIn()) {
       setShowLoginPrompt(true);
       return;
@@ -84,7 +90,6 @@ const HomePart2 = () => {
       setSnackbarType('success');
       setShowSnackbar(true);
     } catch (error) {
-      console.error("Error adding to cart:", error);
       setSnackbarMessage(error.message || 'Failed to update cart');
       setSnackbarType('error');
       setShowSnackbar(true);
@@ -107,6 +112,19 @@ const HomePart2 = () => {
     );
   }
 
+  // No campaign or no items
+  if (!campaign || !campaign.items || campaign.items.length === 0) {
+    return (
+      <div className="bg-[#F9F5EE] px-1 pb-2 md:px-10 md:pb-10 text-center pt-[1rem] md:pt-[8rem]">
+        <h2 className="text-2xl md:text-5xl mb-5 md:mb-0">SPECIAL OFFER</h2>
+        <div className="text-center py-10">
+          <p>No special offers available at the moment</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Display the first campaign found
   return (
     <div className="bg-[#F9F5EE] px-1 pb-2 md:px-10 md:pb-10 text-center pt-[1rem] md:pt-[8rem]">
       <div className="flex justify-between px-3 md:px-[2rem] items-center">
@@ -115,9 +133,9 @@ const HomePart2 = () => {
           <div className="text-sm md:text-2xl font-medium mr-3 md:mr-10">ENDS IN</div>
           <div className="text-right">
             <div className="flex justify-end space-x-3 md:space-x-6">
-              <span className="text-2xl font-mono">00</span>
-              <span className="text-2xl font-mono">00</span>
-              <span className="text-2xl font-mono">00</span>
+              <span className="text-2xl font-mono">{countdown.hours}</span>
+              <span className="text-2xl font-mono">{countdown.minutes}</span>
+              <span className="text-2xl font-mono">{countdown.seconds}</span>
             </div>
             <div className="flex justify-end space-x-4 md:space-x-7 mt-1">
               <span className="text-xs">Hrs</span>
@@ -128,82 +146,100 @@ const HomePart2 = () => {
         </div>
       </div>
 
-      {products.length === 0 ? (
-        <div className="text-center py-10">
-          <p>No special offers available at the moment</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-1 md:gap-6 mt-6">
-          {products.map((product) => (
-            <div 
-              key={product.id} 
-              className={`p-4 ${product.stock === 0 ? 'opacity-70' : 'cursor-pointer'}`}
-              onClick={() => product.stock > 0 && handleProductClick(product.id)}
+      {/* <div className="text-sm md:text-lg text-[#c3a46f] text-left px-4 md:px-12 mb-1">
+        {campaign.name} — {campaign.description}
+      </div> */}
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-1 md:gap-6 mt-6">
+        {campaign.items.map((item, index) => {
+          const p = item.product;
+          const discountType = item.discount_type; // "percent" or "amount"
+          const discountValue = parseFloat(item.discount_value || "0");
+          const originalPrice = parseFloat(p.price);
+
+          let discountedPrice = originalPrice;
+          let discountLabel = "";
+          if (discountType === "percent") {
+            discountedPrice = originalPrice * (1 - discountValue / 100);
+            discountLabel = `${discountValue}% OFF`;
+          } else if (discountType === "amount") {
+            discountedPrice = discountValue;
+            // Calculate percent from amount
+            // (original - discounted) / original * 100
+            const percent =
+              originalPrice > 0
+                ? Math.round(((originalPrice - discountedPrice) / originalPrice) * 100)
+                : 0;
+            discountLabel = `${percent}% OFF`;
+          }
+
+          return (
+            <div
+              key={p.id}
+              className={`p-4 ${p.stock === 0 ? 'opacity-70' : 'cursor-pointer'}`}
+              onClick={() => p.stock > 0 && handleProductClick(p.id)}
             >
               <div className="relative">
                 <img
-                  src={product.image}
-                  alt={product.name}
-                  className={`rounded-lg w-full h-auto object-cover ${product.stock === 0 ? 'grayscale' : ''}`}
+                  src={p.images && p.images.length > 0 ? p.images[0].image_url : '../../assets/default/banner_home.jpeg'}
+                  alt={p.name}
+                  className={`rounded-lg w-full h-auto object-cover ${p.stock === 0 ? 'grayscale' : ''}`}
                   onError={(e) => {
-                  e.target.onerror = null; // Prevent infinite loop
-                  e.target.src = '../../assets/default/banner_home.jpeg'; // Fallback image
-                }}
+                    e.target.onerror = null;
+                    e.target.src = '../../assets/default/banner_home.jpeg';
+                  }}
                 />
-                
                 {/* Stock Status Badge */}
-                {product.stock === 0 ? (
+                {p.stock === 0 ? (
                   <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                     SOLD OUT
                   </div>
-                ) : product.stock < 10 ? (
+                ) : p.stock < 10 ? (
                   <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
                     LOW STOCK
                   </div>
                 ) : null}
-                
                 {/* Discount Badge */}
-                {product.discount > 0 && (
+                {discountLabel && (
                   <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded">
-                    {product.discount}% OFF
+                    {discountLabel}
                   </div>
                 )}
-                
                 {/* Only show add to cart button if product is in stock */}
-                {product.stock > 0 && (
+                {p.stock > 0 && (
                   <div className="absolute bottom-2 right-2 bg-[#faf7f0] p-2 rounded-sm shadow">
-                    <button 
+                    <button
                       className="p-2 rounded-full border-2 border-[#e8d6a8] bg-[#faf7f0]"
-                      onClick={(e) => handleAddToCart(product.id, e)}
+                      onClick={(e) => handleAddToCart(p.id, e)}
                     >
                       <Plus size={12} color="#e8d6a8" />
                     </button>
                   </div>
                 )}
               </div>
-              <h3 className="mt-4 mb-2 text-lg font-semibold">{product.name}</h3>
+              <h3 className="mt-4 mb-2 text-lg font-semibold">{p.name}</h3>
               <span className="text-sm text-[#e8d6a8] px-2 py-1 rounded-md border-3 border-[#e8d6a8]">
-                {product.tag}
+                {p.label && p.label.toUpperCase()}
               </span>
               <div className="flex justify-center items-center mt-2">
                 {Array(5)
                   .fill()
                   .map((_, i) => (
-                    <span key={i} className={i < product.rating ? "text-yellow-400" : "text-gray-300"}>
+                    <span key={i} className={i < Math.round(p.rating) ? "text-yellow-400" : "text-gray-300"}>
                       ★
                     </span>
                   ))}
-                <span className="ml-2">({product.rating.toFixed(1)})</span>
+                <span className="ml-2">({parseFloat(p.rating).toFixed(1)})</span>
               </div>
-              <p className="text-red-500 text-lg open-sans-text">{product.price}</p>
-              <p className="text-gray-400 line-through open-sans-text">{product.originalPrice}</p>
+              <p className="text-red-500 text-lg open-sans-text">{formatIDR(discountedPrice)}</p>
+              <p className="text-gray-400 line-through open-sans-text">{formatIDR(originalPrice)}</p>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* Snackbar for notifications */}
-      <Snackbar 
+      <Snackbar
         message={snackbarMessage}
         show={showSnackbar}
         onClose={() => setShowSnackbar(false)}

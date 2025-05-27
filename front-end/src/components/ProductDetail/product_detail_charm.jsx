@@ -9,11 +9,11 @@ import baseNecklace from "../../assets/default/basenecklace.png";
 
 // Function to format numbers as Indonesian Rupiah
 const formatIDR = (amount) => {
-  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ",00";
+  return "Rp " + Number(amount).toLocaleString("id-ID", { maximumFractionDigits: 2 }).replace(/,/g, ".") + ",00";
 };
 
 const ProductDetailCharm = () => {
-  const { productId } = useParams(); // Changed from productId to charmId
+  const { productId } = useParams();
   const [charm, setCharm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,17 +22,34 @@ const ProductDetailCharm = () => {
   const [showCharms, setShowCharms] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const [note, setNote] = useState('');
-  
+  const [discountItem, setDiscountItem] = useState(null);
+
   useEffect(() => {
-    const fetchCharm = async () => {
+    const fetchCharmAndDiscount = async () => {
       try {
         const response = await fetch(`${BASE_URL}/api/charms/${productId}/`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch charm');
-        }
+        if (!response.ok) throw new Error('Failed to fetch charm');
         const data = await response.json();
         setCharm(data);
         setMainImage(data.image);
+
+        // Fetch discount campaigns and find if this charm is in a campaign
+        const discountRes = await fetch(`${BASE_URL}/api/discount-campaigns/`);
+        if (discountRes.ok) {
+          const discountData = await discountRes.json();
+          let found = null;
+          for (const campaign of discountData) {
+            if (campaign.items && campaign.items.length > 0) {
+              const item = campaign.items.find((itm) => itm.product && itm.product.id == data.id);
+              if (item) {
+                found = item;
+                break;
+              }
+            }
+          }
+          setDiscountItem(found);
+        }
+
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -40,7 +57,7 @@ const ProductDetailCharm = () => {
       }
     };
 
-    fetchCharm();
+    fetchCharmAndDiscount();
   }, [productId]);
 
   const handleAddToCart = () => {
@@ -81,6 +98,33 @@ const ProductDetailCharm = () => {
         <p>Charm not found</p>
       </div>
     );
+  }
+
+  // Discount logic
+  let displayPrice = parseFloat(charm.price);
+  let oldPrice = null;
+  let discountLabel = "";
+  if (discountItem) {
+    const discountType = discountItem.discount_type;
+    const discountValue = parseFloat(discountItem.discount_value || "0");
+    if (discountType === "percent") {
+      displayPrice = displayPrice * (1 - discountValue / 100);
+      oldPrice = parseFloat(charm.price);
+      discountLabel = `${discountValue}% OFF`;
+    } else if (discountType === "amount") {
+      displayPrice = discountValue;
+      oldPrice = parseFloat(charm.price);
+      // percent = (original - discounted) / original * 100
+      const percent = oldPrice > 0
+        ? Math.round(((oldPrice - displayPrice) / oldPrice) * 100)
+        : 0;
+      discountLabel = `${percent}% OFF`;
+    }
+  } else if (parseFloat(charm.discount || 0) > 0) {
+    const discountValue = parseFloat(charm.discount);
+    displayPrice = parseFloat(charm.price) * (1 - discountValue / 100);
+    oldPrice = parseFloat(charm.price);
+    discountLabel = `${discountValue}% OFF`;
   }
 
   // Create thumbnails array (using the same image for all thumbnails since the API only provides one image)
@@ -163,11 +207,18 @@ const ProductDetailCharm = () => {
             <div className="text-xs tracking-wider border border-[#f6e3b8] text-[#a9a9a9] px-2 py-0.5 inline-block mb-2">
               {charm.category.replace(/_/g, ' ').toUpperCase()}
             </div>
-            <p className="text-lg font-bold mb-4">Rp {parseFloat(charm.price).toLocaleString('id-ID')}</p>
-            
-            {/* Divider for mobile only */}
+            <div className="mb-4">
+              {discountLabel ? (
+                <div>
+                  <span className="text-lg font-bold text-red-500 mr-2">{formatIDR(displayPrice)}</span>
+                  <span className="text-base line-through text-gray-400 mr-2">{formatIDR(charm.price)}</span>
+                  <span className="text-xs font-semibold bg-[#c3a46f] text-white px-2 py-1 rounded">{discountLabel}</span>
+                </div>
+              ) : (
+                <span className="text-lg font-bold">{formatIDR(charm.price)}</span>
+              )}
+            </div>
             <div className="md:hidden border-t border-gray-200 my-4"></div>
-
             <p className="text-base text-[#4d4a45] mb-4 leading-relaxed">
               {charm.description}
             </p>

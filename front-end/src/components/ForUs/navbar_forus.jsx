@@ -2,10 +2,10 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Search, User, ShoppingBag, Menu, LogOut } from "lucide-react";
 import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
-import banner from "../../assets/default/navbar_jewelset_bg.png";
+import defaultBanner from "../../assets/default/navbar_jewelset_bg.png";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
-import { isLoggedIn, logout, getAuthData } from "../../utils/api.js";
+import { isLoggedIn, logout, getAuthData, fetchPageBanner } from "../../utils/api.js";
 import Snackbar from '../snackbar.jsx';
 
 const NavBar_ForUs = () => {
@@ -19,6 +19,8 @@ const NavBar_ForUs = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [bannerImage, setBannerImage] = useState(""); // <-- add state for fetched banner
+
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -55,11 +57,18 @@ const NavBar_ForUs = () => {
   useEffect(() => {
     setIsInitialLoad(false);
 
+    // Fetch the banner for "forus" page
+    const getBannerImage = async () => {
+      try {
+        const imageUrl = await fetchPageBanner("for_us");
+        setBannerImage(imageUrl);
+      } catch (error) {
+        setBannerImage(defaultBanner);
+      }
+    };
+    getBannerImage();
+
     if (location.state?.showLoginSuccess) {
-      // setSnackbarMessage('Successfully logged in');
-      // setSnackbarType('success');
-      // setShowSnackbar(true);
-      // Clear the state so it doesn't show again on refresh
       navigate(location.pathname, { replace: true, state: {} });
     }
 
@@ -68,9 +77,6 @@ const NavBar_ForUs = () => {
       const loggedIn = isLoggedIn();
       if (loggedIn && !isLoggedInState) {
         // Just logged in
-        // setSnackbarMessage('Successfully logged in');
-        // setSnackbarType('success');
-        // setShowSnackbar(true);
       }
       setIsLoggedInState(loggedIn);
     };
@@ -89,6 +95,7 @@ const NavBar_ForUs = () => {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
+    // eslint-disable-next-line
   }, [location.state]);
 
   const handleCartClick = () => {
@@ -238,7 +245,7 @@ const NavBar_ForUs = () => {
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${banner})` }}
+          style={{ backgroundImage: `url(${bannerImage || defaultBanner})` }}
         >
           <div className="absolute inset-0 bg-black/30"></div>
         </div>
@@ -510,10 +517,11 @@ const NavBar_ForUs = () => {
                 style={{ animation: 'slideIn 0.3s ease-out' }}
               >
                 <div className="flex justify-between items-center mb-8">
-                  <button className="flex items-center border rounded-full text-xs font-medium">
+                  {/* <button className="flex items-center border rounded-full text-xs font-medium">
                     <span className="px-3 py-1 bg-white rounded-l-full text-black">EN</span>
                     <span className="px-3 py-1 bg-[#e6d4a5] rounded-r-full text-black">ID</span>
-                  </button>
+                  </button> */}
+                  <div className="p-[3rem]"></div>
                   <button 
                     className="text-gray-700 text-2xl"
                     onClick={() => setDrawerOpen(false)}

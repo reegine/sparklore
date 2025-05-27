@@ -80,19 +80,20 @@ export default function CharmCustomizerFull() {
   };
 
   // Filter products by category and charms:true
-  const filterProductsByCategory = (category) => {
-    return productsData
-      .filter(product => product.category === category && product.charms === true)
-      .map(product => ({
-        id: product.id,
-        img: getFirstProductImage(product), // Use first image
-        lastImg: getLastProductImage(product), // Use last image
-        text: product.name,
-        price: parseFloat(product.price),
-        stock: product.stock,
-        category: product.category
-      }));
-  };
+const filterProductsByCategory = (category) => {
+  return productsData
+    .filter(product => product.category === category && product.charms === true)
+    .map(product => ({
+      id: product.id,
+      img: getFirstProductImage(product), // Use first image
+      lastImg: getLastProductImage(product), // Use last image
+      text: product.name,
+      price: parseFloat(product.price),
+      discount_price: product.discount_price ? parseFloat(product.discount_price) : null, // <--- ADD THIS LINE
+      stock: product.stock,
+      category: product.category
+    }));
+};
 
   // Group charms by category
   const groupCharmsByCategory = () => {
@@ -131,6 +132,17 @@ export default function CharmCustomizerFull() {
     }
   };
 
+  // Helper function to get the correct price after discount
+  const getDiscountedPrice = (product) => {
+    if (!product) return 0;
+    // Assuming discount_price is present and valid
+    if (product.discount_price && parseFloat(product.discount_price) > 0) {
+      return parseFloat(product.discount_price);
+    }
+    return parseFloat(product.price) || 0;
+  };
+
+  // Helper function to display base product price with discount
   const BaseProductItem = ({ product }) => (
     <div 
       key={product.id} 
@@ -144,24 +156,27 @@ export default function CharmCustomizerFull() {
         alt={product.text} 
         className={`w-[15rem] h-[15rem] object-cover shadow-md rounded ${product.stock === 0 ? 'grayscale' : ''}`} 
         onError={(e) => {
-          e.target.onerror = null; // Prevent infinite loop
-          e.target.src = '../../assets/default/banner_home.jpeg'; // Fallback image
+          e.target.onerror = null;
+          e.target.src = '../../assets/default/banner_home.jpeg';
         }}
       />
-      
       {product.stock === 0 ? (
-        <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-          SOLD OUT
-        </div>
+        <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD OUT</div>
       ) : product.stock < 10 ? (
-        <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
-          LOW STOCK
-        </div>
+        <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">LOW STOCK</div>
       ) : null}
-      
       <div className="absolute inset-0 bg-[#f5f5dc] opacity-0 group-hover:opacity-80 flex flex-col justify-center items-center transition-opacity">
         <span className="text-lg font-bold text-center">{product.text}</span>
-        <span className="text-sm">Rp {formatIDR(product.price)}</span>
+        {/* Discount price display */}
+        {product.discount_price && parseFloat(product.discount_price) > 0 && parseFloat(product.discount_price) < parseFloat(product.price) ? (
+          <span className="text-sm">
+            <span className="line-through text-gray-400">{formatIDR(product.price)}</span>
+            {' '}
+            <span className="text-red-600">{formatIDR(product.discount_price)}</span>
+          </span>
+        ) : (
+          <span className="text-sm">{formatIDR(product.price)}</span>
+        )}
       </div>
     </div>
   );
@@ -272,17 +287,17 @@ export default function CharmCustomizerFull() {
   const showNecklaces = necklaces.length > 0;
   const showBracelets = bracelets.length > 0;
 
-  // Calculate total price
+  // Calculate total price, using discount if available
   const calculateTotalPrice = () => {
-  let total = parseFloat(selectedBaseProduct?.price) || 0;
-  for (let i = 1; i <= charmCount; i++) {
-    const charmPrice = parseFloat(selectedCharms[i]?.price);
-    if (!isNaN(charmPrice)) {
-      total += charmPrice;
+    let total = getDiscountedPrice(selectedBaseProduct);
+    for (let i = 1; i <= charmCount; i++) {
+      const charm = selectedCharms[i];
+      if (charm) {
+        total += getDiscountedPrice(charm);
+      }
     }
-  }
-  return total;
-};
+    return total;
+  };
 
 
   return (
@@ -334,7 +349,18 @@ export default function CharmCustomizerFull() {
           {selectedBaseProduct ? (
             <>
               <h3 className="text-xl font-medium mb-2">Selected Base: {selectedBaseProduct.text}</h3>
-              <p className="text-gray-700">Rp {formatIDR(selectedBaseProduct.price)}</p>
+              {/* Discount-aware price display for selected base product */}
+              {selectedBaseProduct.discount_price &&
+                parseFloat(selectedBaseProduct.discount_price) > 0 &&
+                parseFloat(selectedBaseProduct.discount_price) < parseFloat(selectedBaseProduct.price) ? (
+                <p className="text-gray-700">
+                  <span className="line-through text-gray-400">{formatIDR(selectedBaseProduct.price)}</span>
+                  {' '}
+                  <span className="text-red-600">{formatIDR(selectedBaseProduct.discount_price)}</span>
+                </p>
+              ) : (
+                <p className="text-gray-700">Rp {formatIDR(selectedBaseProduct.price)}</p>
+              )}
               <button 
                 onClick={() => {
                   setSelectedBaseProduct(null);
@@ -408,6 +434,30 @@ export default function CharmCustomizerFull() {
           <div className="flex-1">
             <div className="text-2xl font-semibold mb-4">
               {formatIDR(calculateTotalPrice())}
+              {/* Optionally, show the striked original price if any item is discounted */}
+              {(() => {
+                let hasDiscount = false;
+                let originalTotal = (selectedBaseProduct ? parseFloat(selectedBaseProduct.price) : 0);
+                for (let i = 1; i <= charmCount; i++) {
+                  const charm = selectedCharms[i];
+                  if (charm) {
+                    originalTotal += parseFloat(charm.price) || 0;
+                    if (charm.discount_price && parseFloat(charm.discount_price) < parseFloat(charm.price)) {
+                      hasDiscount = true;
+                    }
+                  }
+                }
+                if (
+                  selectedBaseProduct &&
+                  selectedBaseProduct.discount_price &&
+                  parseFloat(selectedBaseProduct.discount_price) < parseFloat(selectedBaseProduct.price)
+                ) {
+                  hasDiscount = true;
+                }
+                return hasDiscount && originalTotal > calculateTotalPrice() ? (
+                  <span className="ml-2 text-lg line-through text-gray-400">{formatIDR(originalTotal)}</span>
+                ) : null;
+              })()}
             </div>
 
             <div className="flex gap-2 mb-4">

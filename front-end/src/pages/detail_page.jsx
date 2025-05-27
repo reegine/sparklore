@@ -22,7 +22,7 @@ export default function DetailPage() {
       <NavBar/>
       <ProductDetail productId={productId} />
       <InfoAccordion/>
-      <ProductDetailCharmBar  productId={productId} />
+      <ProductDetailCharmBar productId={productId} />
       <Recommend/>
       <Features/>
       <VideoCarousel/>

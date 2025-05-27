@@ -9,6 +9,50 @@ import {
 } from "lucide-react";
 import { cn, BASE_URL } from "../../utils/utils.js";
 
+// Helper: format IDR currency
+const formatIDR = (value) =>
+  "Rp " +
+  Number(value)
+    .toLocaleString("id-ID", { maximumFractionDigits: 2 })
+    .replace(/,/g, ".") + ",00";
+
+// Helper: get first product image, fallback if not available
+const getFirstProductImage = (product) => {
+  if (product.images && product.images.length > 0) {
+    return product.images[0].image_url;
+  }
+  return product.image || '../../assets/default/banner_home.jpeg';
+};
+
+// Discount price calculation logic per product
+const getDiscounted = (product, discountMapArg) => {
+  const discountItem = (discountMapArg || {})[`${product.id}`];
+  let displayPrice = product.price;
+  let oldPrice = null;
+  let discountLabel = "";
+  if (discountItem) {
+    const discountType = discountItem.discount_type;
+    const discountValue = parseFloat(discountItem.discount_value || "0");
+    if (discountType === "percent") {
+      displayPrice = product.price * (1 - discountValue / 100);
+      oldPrice = product.price;
+      discountLabel = `${discountValue}% OFF`;
+    } else if (discountType === "amount") {
+      displayPrice = discountValue;
+      oldPrice = product.price;
+      const percent = oldPrice > 0
+        ? Math.round(((oldPrice - displayPrice) / oldPrice) * 100)
+        : 0;
+      discountLabel = `${percent}% OFF`;
+    }
+  } else if (product.discount > 0) {
+    displayPrice = product.price * (1 - product.discount / 100);
+    oldPrice = product.price;
+    discountLabel = `${product.discount}% OFF`;
+  }
+  return { displayPrice, oldPrice, discountLabel };
+};
+
 export default function ProductGrid() {
   const navigate = useNavigate();
   const [layout, setLayout] = useState("grid");
@@ -23,27 +67,46 @@ export default function ProductGrid() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [discountMap, setDiscountMap] = useState({});
 
-  // Fetch products from API
+  // Fetch products and discounts from API
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/products/`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch products");
+        const [productRes, discountRes] = await Promise.all([
+          fetch(`${BASE_URL}/api/products/`),
+          fetch(`${BASE_URL}/api/discount-campaigns/`)
+        ]);
+        if (!productRes.ok) throw new Error("Failed to fetch products");
+        const data = await productRes.json();
+
+        // Discount map: productId -> discountItem (string key for reliability)
+        let discountData = [];
+        if (discountRes.ok) {
+          discountData = await discountRes.json();
         }
-        const data = await response.json();
-        
+        const discountMap = {};
+        discountData.forEach(campaign => {
+          if (campaign.items && campaign.items.length > 0) {
+            campaign.items.forEach(item => {
+              if (item.product && item.product.id !== undefined && item.product.id !== null) {
+                discountMap[`${item.product.id}`] = item;
+              }
+            });
+          }
+        });
+        setDiscountMap(discountMap);
+
         // Transform data and sort by creation date (newest first)
         const transformedProducts = data
           .map(product => ({
             id: product.id,
             name: product.name,
-            type: product.label.toUpperCase(),
-            price: `Rp ${parseFloat(product.price).toLocaleString('id-ID')}`,
-            originalPrice: null,
+            type: product.label ? product.label.toUpperCase() : "",
+            price: parseFloat(product.price),
+            discount: parseFloat(product.discount || 0),
             rating: parseFloat(product.rating) || 0,
-            image: product.image,
+            image: getFirstProductImage(product),
             stock: product.stock,
             soldStock: product.sold_stok || 0,
             createdAt: product.created_at || new Date().toISOString(),
@@ -56,12 +119,12 @@ export default function ProductGrid() {
         const bestSellerIds = bySoldStock.slice(0, 10).map(p => p.id);
 
         // Identify new arrivals (top 10 most recent)
-        const byCreationDate = [...transformedProducts].sort((a, b) => 
+        const byCreationDate = [...transformedProducts].sort((a, b) =>
           new Date(b.createdAt) - new Date(a.createdAt));
         const newArrivalIds = byCreationDate.slice(0, 10).map(p => p.id);
 
         // Identify oldest products (top 10 oldest)
-        const byCreationDateOldest = [...transformedProducts].sort((a, b) => 
+        const byCreationDateOldest = [...transformedProducts].sort((a, b) =>
           new Date(a.createdAt) - new Date(b.createdAt));
         const oldestIds = byCreationDateOldest.slice(0, 10).map(p => p.id);
 
@@ -70,7 +133,8 @@ export default function ProductGrid() {
           ...product,
           isBestSeller: bestSellerIds.includes(product.id),
           isNewArrival: newArrivalIds.includes(product.id),
-          isOldest: oldestIds.includes(product.id)
+          isOldest: oldestIds.includes(product.id),
+          ...getDiscounted(product, discountMap)
         }));
 
         setProducts(finalProducts);
@@ -83,7 +147,19 @@ export default function ProductGrid() {
     };
 
     fetchProducts();
+    // eslint-disable-next-line
   }, []);
+
+  // Re-apply discount logic if products/discountMap changes
+  useEffect(() => {
+    setFilteredProducts(
+      products.map(product => ({
+        ...product,
+        ...getDiscounted(product, discountMap)
+      }))
+    );
+    // eslint-disable-next-line
+  }, [products, discountMap]);
 
   const handleProductClick = (productId) => {
     navigate(`/products/${productId}`);
@@ -101,7 +177,6 @@ export default function ProductGrid() {
   const toggleFilter = (category, value) => {
     setFilters((prev) => {
       const newFilters = { ...prev };
-      
       if (category === "price") {
         if (newFilters[category].includes(value)) {
           newFilters[category] = [];
@@ -125,13 +200,14 @@ export default function ProductGrid() {
     return filters[category].includes(value);
   };
 
-  const parsePrice = (p) =>
-    p ? parseInt(p.replace(/[^\d]/g, "")) : Number.MAX_SAFE_INTEGER;
-
   const handleDone = () => {
     setIsPopupOpen(false);
 
-    let filtered = [...products];
+    // Filtering and sorting logic, with discount-aware prices
+    let filtered = products.map(product => ({
+      ...product,
+      ...getDiscounted(product, discountMap)
+    }));
 
     if (filters.material.length > 0) {
       filtered = filtered.filter((product) =>
@@ -143,16 +219,17 @@ export default function ProductGrid() {
       filtered = filtered.filter((product) => {
         if (filters.product.includes("Best Seller") && product.isBestSeller) return true;
         if (filters.product.includes("New Arrival") && product.isNewArrival) return true;
-        if (filters.product.includes("Newest") && product.isNewArrival) return true;
+        if (filters.product.includes("Newest")) return product.isNewArrival;
         if (filters.product.includes("Oldest") && product.isOldest) return true;
         return false;
       });
     }
 
+    // Use displayPrice for sorting!
     if (filters.price.includes("Low to High")) {
-      filtered.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+      filtered.sort((a, b) => a.displayPrice - b.displayPrice);
     } else if (filters.price.includes("High to Low")) {
-      filtered.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+      filtered.sort((a, b) => b.displayPrice - a.displayPrice);
     }
 
     setFilteredProducts(filtered);
@@ -165,7 +242,10 @@ export default function ProductGrid() {
       product: [],
       price: [],
     });
-    setFilteredProducts(products);
+    setFilteredProducts(products.map(product => ({
+      ...product,
+      ...getDiscounted(product, discountMap)
+    })));
     setCurrentPage(1);
   };
 
@@ -233,104 +313,155 @@ export default function ProductGrid() {
               layout === "grid" ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
             } gap-6`}
           >
-            {currentProducts.map((product) => (
-              <div
-                key={product.id}
-                className={`p-2 rounded-lg hover:shadow-md transition duration-200 relative ${
-                  product.stock === 0 ? 'opacity-70' : 'cursor-pointer'
-                }`}
-                onClick={() => product.stock > 0 && handleProductClick(product.id)}
-              >
-                <div className="relative">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className={`rounded-md w-full h-auto object-cover ${
-                      product.stock === 0 ? 'grayscale' : ''
-                    }`}
-                  />
-                  
-                  {/* Stock Status Badge */}
-                  {product.stock === 0 ? (
-                    <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                      SOLD OUT
-                    </div>
-                  ) : product.stock < 10 ? (
-                    <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
-                      LOW STOCK
-                    </div>
-                  ) : null}
-                  
-                  {/* Best Seller Badge */}
-                  {product.isBestSeller && (
-                    <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded">
-                      BEST SELLER
-                    </div>
-                  )}
-                  
-                  {/* New Arrival Badge */}
-                  {/* {product.isNewArrival && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
-                      NEW
-                    </div>
-                  )} */}
-                  
-                  {/* Only show add to cart button if product is in stock */}
-                  {product.stock > 0 && (
-                    <div className="absolute bottom-2 right-2 bg-white p-1 rounded-b-xs">
-                      <button 
-                        className="bg-white text-[#c3a46f] border border-[#c3a46f] p-1 rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Add to cart logic here
-                        }}
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="text-center mt-2">
-                  <p className="text-sm font-semibold uppercase text-[#403c39] leading-tight">
-                    {product.name}
-                  </p>
-                  <p className="text-[10px] mt-1">
-                    <span className="px-2 py-[2px] text-[#c3a46f] bg-[#f1ede5] border border-[#c3a46f] rounded-sm">
-                      {product.type}
-                    </span>
-                  </p>
-                  <div className="flex justify-center mt-1">
-                    {Array(5)
-                      .fill(0)
-                      .map((_, i) => (
-                        <Star
-                          key={i}
-                          size={14}
-                          className={cn(
-                            "mx-[1px]",
-                            i < product.rating
-                              ? "text-yellow-500"
-                              : "text-gray-300"
-                          )}
-                        />
-                      ))}
-                    <span className="text-xs text-gray-500 ml-1">
-                      ({product.rating.toFixed(1)})
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    <p className="text-sm font-medium text-[#403c39]">
-                      {product.price}
-                    </p>
-                    {product.originalPrice && (
-                      <p className="text-xs text-gray-400 line-through">
-                        {product.originalPrice}
-                      </p>
+            {currentProducts.map((product) => {
+              const { displayPrice, oldPrice, discountLabel } = getDiscounted(product, discountMap);
+              const showBestSeller = product.isBestSeller;
+              const showDiscount = !!discountLabel;
+              const showNewArrival = product.isNewArrival;
+              return (
+                <div
+                  key={product.id}
+                  className={`p-2 rounded-lg hover:shadow-md transition duration-200 relative ${
+                    product.stock === 0 ? 'opacity-70' : 'cursor-pointer'
+                  }`}
+                  onClick={() => product.stock > 0 && handleProductClick(product.id)}
+                >
+                  <div className="relative">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className={`rounded-md w-full h-auto object-cover ${
+                        product.stock === 0 ? 'grayscale' : ''
+                      }`}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '../../assets/default/banner_home.jpeg';
+                      }}
+                    />
+                    
+                    {/* Stock Status Badge */}
+                    {product.stock === 0 ? (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                        SOLD OUT
+                      </div>
+                    ) : product.stock < 10 ? (
+                      <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
+                        LOW STOCK
+                      </div>
+                    ) : null}
+
+                    {/* Best Seller, Discount, New Arrival Badges */}
+                    {/* If more than one badge, space vertically */}
+                    {showBestSeller && showDiscount && showNewArrival ? (
+                      <>
+                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          BEST SELLER
+                        </div>
+                        <div className="absolute top-10 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          {discountLabel}
+                        </div>
+                        <div className="absolute top-18 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          NEW
+                        </div>
+                      </>
+                    ) : showBestSeller && showDiscount ? (
+                      <>
+                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          BEST SELLER
+                        </div>
+                        <div className="absolute top-10 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          {discountLabel}
+                        </div>
+                      </>
+                    ) : showBestSeller && showNewArrival ? (
+                      <>
+                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          BEST SELLER
+                        </div>
+                        <div className="absolute top-10 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          NEW
+                        </div>
+                      </>
+                    ) : showDiscount && showNewArrival ? (
+                      <>
+                        <div className="absolute top-2 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          {discountLabel}
+                        </div>
+                        <div className="absolute top-10 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                          NEW
+                        </div>
+                      </>
+                    ) : showBestSeller ? (
+                      <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                        BEST SELLER
+                      </div>
+                    ) : showDiscount ? (
+                      <div className="absolute top-2 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                        {discountLabel}
+                      </div>
+                    ) : showNewArrival ? (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
+                        NEW
+                      </div>
+                    ) : null}
+
+                    {/* Only show add to cart button if product is in stock */}
+                    {product.stock > 0 && (
+                      <div className="absolute bottom-2 right-2 bg-white p-1 rounded-b-xs">
+                        <button 
+                          className="bg-white text-[#c3a46f] border border-[#c3a46f] p-1 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Add to cart logic here
+                          }}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
                     )}
                   </div>
+                  <div className="text-center mt-2">
+                    <p className="text-sm font-semibold uppercase text-[#403c39] leading-tight">
+                      {product.name}
+                    </p>
+                    <p className="text-[10px] mt-1">
+                      <span className="px-2 py-[2px] text-[#c3a46f] bg-[#f1ede5] border border-[#c3a46f] rounded-sm">
+                        {product.type}
+                      </span>
+                    </p>
+                    <div className="flex justify-center mt-1">
+                      {Array(5)
+                        .fill(0)
+                        .map((_, i) => (
+                          <Star
+                            key={i}
+                            size={14}
+                            className={cn(
+                              "mx-[1px]",
+                              i < product.rating
+                                ? "text-yellow-500"
+                                : "text-gray-300"
+                            )}
+                          />
+                        ))}
+                      <span className="text-xs text-gray-500 ml-1">
+                        ({product.rating.toFixed(1)})
+                      </span>
+                    </div>
+                    <div className="mt-1">
+                      <p className="text-sm font-medium text-[#403c39]">
+                        {formatIDR(displayPrice)}
+                      </p>
+                      {oldPrice && (
+                        <p className="text-xs text-gray-400 line-through">
+                          {formatIDR(oldPrice)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Pagination */}

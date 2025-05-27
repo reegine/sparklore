@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { BASE_URL } from "../../utils/api.js";
 
+// Helper: format IDR currency
+const formatIDR = (value) =>
+  "Rp " +
+  Number(value)
+    .toLocaleString("id-ID", { maximumFractionDigits: 2 })
+    .replace(/,/g, ".");
+
 const ProductDetail = () => {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
@@ -12,10 +19,13 @@ const ProductDetail = () => {
   const [showCharms, setShowCharms] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const [note, setNote] = useState('');
+  const [discountItem, setDiscountItem] = useState(null);
 
+  // Fetch product and discount information
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndDiscount = async () => {
       try {
+        // Fetch the product
         const response = await fetch(`${BASE_URL}/api/products/${productId}/`);
         if (!response.ok) {
           throw new Error('Failed to fetch product');
@@ -26,12 +36,29 @@ const ProductDetail = () => {
           data.charms_detail = [];
         }
         setProduct(data);
+
         // Set the first image as main image if available
         if (data.images && data.images.length > 0) {
           setMainImage(data.images[0].image_url);
         } else {
-          // Fallback to a default image if no images are available
           setMainImage('/path/to/default/image.png');
+        }
+
+        // Fetch discount campaigns and find if this product is in a campaign
+        const discountRes = await fetch(`${BASE_URL}/api/discount-campaigns/`);
+        if (discountRes.ok) {
+          const discountData = await discountRes.json();
+          let found = null;
+          for (const campaign of discountData) {
+            if (campaign.items && campaign.items.length > 0) {
+              const item = campaign.items.find((itm) => itm.product && itm.product.id == data.id);
+              if (item) {
+                found = item;
+                break;
+              }
+            }
+          }
+          setDiscountItem(found);
         }
         setLoading(false);
       } catch (err) {
@@ -40,7 +67,7 @@ const ProductDetail = () => {
       }
     };
 
-    fetchProduct();
+    fetchProductAndDiscount();
   }, [productId]);
 
   const handleAddToCart = () => {
@@ -83,10 +110,41 @@ const ProductDetail = () => {
     );
   }
 
+  // Compute discounted price and badge
+  let displayPrice = parseFloat(product.price);
+  let oldPrice = null;
+  let discountLabel = "";
+  if (discountItem) {
+    const discountType = discountItem.discount_type;
+    const discountValue = parseFloat(discountItem.discount_value || "0");
+    if (discountType === "percent") {
+      displayPrice = displayPrice * (1 - discountValue / 100);
+      oldPrice = parseFloat(product.price);
+      discountLabel = `${discountValue}% OFF`;
+    } else if (discountType === "amount") {
+      displayPrice = discountValue;
+      oldPrice = parseFloat(product.price);
+      // percent = (original - discounted) / original * 100
+      const percent = oldPrice > 0
+        ? Math.round(((oldPrice - displayPrice) / oldPrice) * 100)
+        : 0;
+      discountLabel = `${percent}% OFF`;
+    }
+  } else if (parseFloat(product.discount || 0) > 0) {
+    const discountValue = parseFloat(product.discount);
+    displayPrice = parseFloat(product.price) * (1 - discountValue / 100);
+    oldPrice = parseFloat(product.price);
+    discountLabel = `${discountValue}% OFF`;
+  }
+
   // Create thumbnails array from product.images
   const thumbnails = product.images && product.images.length > 0 
     ? product.images.map(img => img.image_url) 
     : [];
+
+  // Button width constants
+  const BTN_RATIO = "w-[26%]";
+  const BTN_SINGLE = "w-[53%]";
 
   return (
     <div className='bg-[#faf7f0] relative'>
@@ -192,9 +250,19 @@ const ProductDetail = () => {
             <div className="text-xs tracking-wider border border-[#f6e3b8] text-[#a9a9a9] px-2 py-0.5 inline-block mb-2">
               {product.label.toUpperCase()}
             </div>
-            <p className="text-lg font-bold mb-4">Rp {parseFloat(product.price).toLocaleString('id-ID')}</p>
+            <div className="mb-4">
+              {/* Discount section */}
+              {discountLabel ? (
+                <div>
+                  <span className="text-lg font-bold text-red-500 mr-2">{formatIDR(displayPrice)}</span>
+                  <span className="text-base line-through text-gray-400 mr-2">{formatIDR(product.price)}</span>
+                  <span className="text-xs font-semibold bg-[#c3a46f] text-white px-2 py-1 rounded">{discountLabel}</span>
+                </div>
+              ) : (
+                <span className="text-lg font-bold">{formatIDR(product.price)}</span>
+              )}
+            </div>
             
-            {/* Divider for mobile only */}
             <div className="md:hidden border-t border-gray-200 my-4"></div>
 
             <p className="text-base text-[#4d4a45] mb-4 leading-relaxed">
@@ -214,38 +282,64 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Add to Cart Button */}
-        <div className="mt-10 md:flex hidden">
-          <button 
-            onClick={handleAddToCart}
-            disabled={charm.stock === 0}
-            className={`w-[26.5%] mx-3 px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
-          >
-            {charm.stock === 0 ? 'Out of Stock' : 'Customize'}
-          </button>
-          <button 
-            onClick={handleAddToCart}
-            disabled={charm.stock === 0}
-            className={`w-[26.5%] px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#ffffff00] border-2 border-[#f6e3b8] hover:opacity-90 hover:bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition`}
-          >
-            {charm.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-          </button>
+        {/* Add to Cart & Customize Button */}
+        <div className="mt-10 md:flex hidden gap-3">
+          {product.charms ? (
+            <>
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={`${BTN_RATIO} px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
+              >
+                {product.stock === 0 ? 'Out of Stock' : 'Customize'}
+              </button>
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={`${BTN_RATIO} px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#ffffff00] border-2 border-[#f6e3b8] hover:opacity-90 hover:bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition`}
+              >
+                {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className={`${BTN_SINGLE} px-10 py-4 text-lg ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition border-0`}
+            >
+              {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+            </button>
+          )}
         </div>
-        <div className="mt-6 md:hidden order-4">
-          <button 
-            onClick={handleAddToCart}
-            disabled={charm.stock === 0}
-            className={`w-[26.5%] px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
-          >
-            {charm.stock === 0 ? 'Out of Stock' : 'Customize'}
-          </button>
-          <button 
-            onClick={handleAddToCart}
-            disabled={charm.stock === 0}
-            className={`w-[26.5%] px-10 py-4 text-lg ${charm.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#ffffff00] border-2 border-[#f6e3b8] hover:opacity-90 hover:bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition`}
-          >
-            {charm.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-          </button>
+
+        {/* MOBILE Add to Cart & Customize Button */}
+        <div className="mt-6 md:hidden order-4 flex gap-3">
+          {product.charms ? (
+            <>
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={`${BTN_RATIO} px-4 py-3 text-base ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8] hover:opacity-90'} text-[#2d2a26] font-medium rounded transition`}
+              >
+                {product.stock === 0 ? 'Out of Stock' : 'Customize'}
+              </button>
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+                className={`${BTN_RATIO} px-4 py-3 text-base ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#ffffff00] border-2 border-[#f6e3b8] hover:opacity-90 hover:bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition`}
+              >
+                {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className={`${BTN_SINGLE} px-4 py-3 text-base ${product.stock === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#f6e3b8]'} text-[#2d2a26] font-medium rounded transition border-0`}
+            >
+              {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+            </button>
+          )}
         </div>
       </div>
     </div>

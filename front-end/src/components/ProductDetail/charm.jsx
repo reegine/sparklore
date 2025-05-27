@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import clsx from "clsx";
 import { BASE_URL, fetchProduct, fetchAllCharms } from "../../utils/api";
 
@@ -19,7 +19,7 @@ const ProductDetailCharmBar = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Charm customizer state
   const [baseImage, setBaseImage] = useState('');
   const [charmCount, setCharmCount] = useState(2);
@@ -35,19 +35,19 @@ const ProductDetailCharmBar = () => {
         // Fetch product data
         const productData = await fetchProduct(productId);
         setProduct(productData);
-        
+
         // Only proceed if product has charms enabled
         if (productData.charms) {
           // Set base image to the last image in the product's image list
           if (productData.images && productData.images.length > 0) {
             setBaseImage(productData.images[productData.images.length - 1].image_url);
           }
-          
+
           // Fetch charms data
           const charms = await fetchAllCharms();
           setCharmsData(charms);
         }
-        
+
         setLoading(false);
         setCharmLoading(false);
       } catch (err) {
@@ -59,26 +59,6 @@ const ProductDetailCharmBar = () => {
 
     fetchData();
   }, [productId]);
-
-  const scroll = (ref, direction) => {
-    const scrollByAmount = 260;
-    if (ref.current) {
-      ref.current.scrollBy({
-        left: direction === "left" ? -scrollByAmount : scrollByAmount,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  const handleCharmSelect = (charm) => {
-    setSelectedCharms((prev) => ({
-      ...prev,
-      [selectedTab]: charm,
-    }));
-    if (selectedTab < charmCount) {
-      setSelectedTab((prev) => prev + 1);
-    }
-  };
 
   const getCharmPosition = (index, total) => {
     const baseSize = '25.33%';
@@ -103,7 +83,7 @@ const ProductDetailCharmBar = () => {
         transform: `translate(-50%, -50%) rotate(${rotationAngle}deg)`
       };
     }
-    
+
     if (total === 3) {
       const positions = [
         { left: '43%', top: '71%', rotation: 30 },
@@ -185,9 +165,19 @@ const ProductDetailCharmBar = () => {
     return total;
   };
 
+  const handleCharmSelect = (charm) => {
+    setSelectedCharms((prev) => ({
+      ...prev,
+      [selectedTab]: charm,
+    }));
+    if (selectedTab < charmCount) {
+      setSelectedTab((prev) => prev + 1);
+    }
+  };
+
   if (loading || charmLoading) {
     return (
-      <div className="bg-[#f9f5ef] min-h-screen flex justify-center items-center">
+      <div className="bg-[#faf7f0] min-h-screen flex justify-center items-center">
         <p>Loading...</p>
       </div>
     );
@@ -195,7 +185,7 @@ const ProductDetailCharmBar = () => {
 
   if (error) {
     return (
-      <div className="bg-[#f9f5ef] min-h-screen flex justify-center items-center">
+      <div className="bg-[#faf7f0] min-h-screen flex justify-center items-center">
         <p>Error: {error}</p>
       </div>
     );
@@ -204,14 +194,14 @@ const ProductDetailCharmBar = () => {
   // If product doesn't have charms enabled, redirect or show message
   if (!product?.charms) {
     return (
-      <div className="bg-[#f9f5ef] min-h-screen flex justify-center items-center">
-        <p>This product does not support charm customization.</p>
-        <button 
-          onClick={() => navigate(-1)} 
+      <div className="bg-[#faf7f0] flex justify-center items-center lg:pt-[9rem]">
+        {/* <p>This product does not support charm customization.</p>
+        <button
+          onClick={() => navigate(-1)}
           className="ml-4 px-4 py-2 bg-[#e6d5a7] rounded"
         >
           Go Back
-        </button>
+        </button> */}
       </div>
     );
   }
@@ -219,35 +209,49 @@ const ProductDetailCharmBar = () => {
   const groupedCharms = groupCharmsByCategory();
 
   return (
-    <div className="bg-[#f9f5ef] min-h-screen">
+    <div className="bg-[#faf7f0] min-h-screen">
       <div className="font-sans px-6 py-12 max-w-6xl mx-auto">
-        {/* Product Info Section */}
-        <div className="mb-12">
-          <h1 className="text-3xl font-serif font-semibold mb-4">{product.name}</h1>
-          <p className="text-lg mb-6">{product.description}</p>
-          <div className="text-2xl font-semibold">
-            {formatIDR(product.price)}
-          </div>
+        {/* Pick charm count */}
+        <h2 className="text-2xl font-serif font-semibold mb-4">CUSTOMIZE YOUR CHARM</h2>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[1, 2, 3, 4, 5].map((num) => (
+            <button
+              key={num}
+              onClick={() => {
+                setCharmCount(num);
+                setSelectedTab(1);
+                setSelectedCharms({});
+              }}
+              className={clsx(
+                "px-4 py-2 border rounded transition",
+                charmCount === num ? "bg-[#e6d5a7]" : "bg-white"
+              )}
+            >
+              {num} Charm{num > 1 ? "s" : ""}
+            </button>
+          ))}
         </div>
 
-        {/* Charm Customizer Section */}
-        <h2 className="text-2xl font-serif font-semibold mb-6">CUSTOMIZE YOUR CHARM</h2>
-        
         <div className="flex flex-col lg:flex-row gap-8">
+          {/* Preview */}
           <div className="bg-white rounded p-4 relative overflow-hidden" style={{ width: '100%', maxWidth: '500px', aspectRatio: '1/1' }}>
             <div className="relative w-full h-full flex items-center justify-center">
               <div className="relative" style={{ width: '100%', height: '100%' }}>
-                <img 
-                  src={baseImage} 
-                  alt="Base" 
-                  className="absolute w-full h-full object-contain" 
+                <img
+                  src={baseImage}
+                  alt="Base"
+                  className="absolute w-full h-full object-contain"
                   style={{ aspectRatio: '1/1' }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '../../assets/default/basenecklace.png';
+                  }}
                 />
-                
+
                 <div className="absolute inset-0 flex items-center justify-center">
                   {Array.from({ length: charmCount }, (_, i) => (
                     selectedCharms[i + 1] && (
-                      <div 
+                      <div
                         key={i}
                         className="absolute"
                         style={{
@@ -262,6 +266,10 @@ const ProductDetailCharmBar = () => {
                           src={selectedCharms[i + 1].image}
                           alt={`Charm ${i + 1}`}
                           className="w-full h-full object-contain"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '../../assets/default/basenecklace.png';
+                          }}
                         />
                       </div>
                     )
@@ -271,6 +279,7 @@ const ProductDetailCharmBar = () => {
             </div>
           </div>
 
+          {/* Charm picker and total price */}
           <div className="flex-1">
             <div className="text-2xl font-semibold mb-4">
               {formatIDR(calculateTotalPrice())}
@@ -308,15 +317,19 @@ const ProductDetailCharmBar = () => {
                   {openCategory === category && (
                     <div className="grid grid-cols-3 gap-2 p-2">
                       {charms.map((charm) => (
-                        <div 
-                          key={charm.id} 
-                          className="relative cursor-pointer group" 
+                        <div
+                          key={charm.id}
+                          className="relative cursor-pointer group"
                           onClick={() => handleCharmSelect(charm)}
                         >
                           <img
                             src={charm.image}
                             alt={charm.name}
                             className="hover:scale-105 transition rounded border p-1 w-full"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '../../assets/default/basenecklace.png';
+                            }}
                           />
                           <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }} className="absolute inset-0 opacity-0 group-hover:opacity-100 flex justify-center items-center text-white text-sm font-semibold transition">
                             {charm.name}
@@ -327,7 +340,7 @@ const ProductDetailCharmBar = () => {
                   )}
                 </div>
               ))}
-            </div>               
+            </div>
           </div>
         </div>
       </div>

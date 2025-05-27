@@ -6,7 +6,7 @@ import NavBar from '../components/Home/navbar.jsx';
 import ProductDetailCharm from '../components/ProductDetail/product_detail_charm.jsx';
 import ProductDetailCharmBar from '../components/ProductDetail/charm.jsx';
 import InfoAccordion from '../components/ProductDetail/dropdown.jsx';
-import Recommend from '../components/ProductDetail/recommend.jsx';
+import RecommendCharm from '../components/ProductDetail/recommend_charm.jsx';
 import Features from '../components/Home/home_pt4.jsx';
 import VideoCarousel from '../components/Home/home_pt5.jsx';
 import Reviews from '../components/Home/home_pt6.jsx';
@@ -23,7 +23,7 @@ export default function DetailPageCharm() {
       <ProductDetailCharm productId={productId} />
       <InfoAccordion/>
       {/* <ProductDetailCharmBar/> */}
-      <Recommend/>
+      <RecommendCharm/>
       <Features/>
       <VideoCarousel/>
       <Reviews/>
