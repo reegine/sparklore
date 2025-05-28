@@ -84,7 +84,7 @@ const NavBar = () => {
                   discount: discount,
                   quantity: item.quantity,
                   selected: false,
-                  image: product.image || product1,
+                  image: (product.images && product.images.length > 0) ? product.images[0].image_url : product1,
                   charms: charmDetails.map(charm => charm.image),
                   message: item.message || ""
                 };
@@ -244,7 +244,7 @@ const handleQuantityChange = async (id, change) => {
           discount: discount,
           quantity: item.quantity,
           selected: item.selected || false,
-          image: product.image || product1,
+          image: (product.images && product.images.length > 0) ? product.images[0].image_url : product1,
           charms: charmDetails.map(charm => charm.image),
           message: item.message || ""
         };

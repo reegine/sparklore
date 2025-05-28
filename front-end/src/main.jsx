@@ -15,7 +15,6 @@ import DetailPage from './pages/detail_page';
 import DetailPageCharm from './pages/detail_page_charm';
 import Login from './pages/login.jsx';
 import OTPCode from './pages/otpcode.jsx';
-
 import NotFound from './pages/not_found.jsx'
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Checkout from './pages/checkout.jsx'
@@ -30,6 +29,7 @@ import ForHer from './pages/for_her.jsx'
 import FaqRefundPage from './pages/faq.jsx'
 import FaqPage from './pages/faq.jsx'
 import RefundPage from './pages/refund.jsx'
+import DetailPageSets from './pages/detail_page_sets.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -43,6 +43,7 @@ const router = createBrowserRouter([
   {path:"/necklaces", element: <Necklaces/>},
   {path:"/products/:productId", element: <DetailPage />},
   {path:"/products-charm/:productId", element: <DetailPageCharm />},
+  {path:"/products-sets/:productId", element: <DetailPageSets />},
   {path:"/login", element: <Login />},
   {path:"/verify", element: <OTPCode />},
   {path:"/checkout", element: <Checkout />},

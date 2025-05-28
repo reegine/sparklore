@@ -38,7 +38,7 @@ const HomePart1 = () => {
         navigate("/new-arrival");
         break;
       case 2:
-        navigate("/giftsets");
+        navigate("/giftsets#valentine-promo");
         break;
       case 3:
         navigate("/jewel-set");

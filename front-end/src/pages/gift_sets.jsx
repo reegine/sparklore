@@ -8,15 +8,32 @@ import Features from '../components/Home/home_pt4.jsx'
 import VideoCarousel from '../components/Home/home_pt5.jsx'
 import Reviews from '../components/Home/home_pt6.jsx'
 import JewelryGallery from '../components/Home/home_pt7.jsx'
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export default function GiftSets() {
+      const location = useLocation();
+
+    useEffect(() => {
+      if (location.hash) {
+        const el = document.getElementById(location.hash.replace('#', ''));
+        if (el) {
+          setTimeout(() => {
+            el.scrollIntoView({ behavior: 'smooth' });
+          }, 100); // Delay to ensure DOM is ready
+        }
+      }
+    }, [location]);
+
     return (
       <>
           <NavBar_GiftSets/>
           <MovingBanner />
           <BannerHome/>
           <GiftSetPart1/>
-          <ValentinesPromo/>
+          <div id="valentine-promo">
+            <ValentinesPromo/>
+          </div>
           <Features/>
           <VideoCarousel/>
           <Reviews/>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { verifyOTP } from '../../utils/api';
+import { verifyOTP, requestOTP } from '../../utils/api';
 
 const CodeVerificationPage = () => {
   const [code, setCode] = useState(["", "", "", ""]);
@@ -10,6 +10,7 @@ const CodeVerificationPage = () => {
   const location = useLocation();
   const email = location.state?.email;
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     const countdown = setInterval(() => {
@@ -35,15 +36,28 @@ const CodeVerificationPage = () => {
         // Store in location state to trigger snackbar in NavBar
         navigate("/", { state: { showLoginSuccess: true } });
         if (location.state?.showLoginSuccess) {
-        setSnackbarMessage('You are logged in');
-        setSnackbarType('success');
-        setShowSnackbar(true);
-        // Clear the state so it doesn't show again on refresh
-        navigate(location.pathname, { replace: true, state: {} });
-      }
+          setSnackbarMessage('You are logged in');
+          setSnackbarType('success');
+          setShowSnackbar(true);
+          // Clear the state so it doesn't show again on refresh
+          navigate(location.pathname, { replace: true, state: {} });
+        }
       } catch (err) {
         setError(err.message);
       }
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    setError('');
+    try {
+      await requestOTP(email);
+      setTimer(5 * 60);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -86,6 +100,21 @@ const CodeVerificationPage = () => {
           className="w-full py-3 bg-[#e8d49c] text-[#2d2d2d] font-medium rounded hover:opacity-90 transition mb-3"
         >
           Verify
+        </button>
+        <button
+          onClick={handleResend}
+          className="w-full py-2 bg-transparent border border-[#e8d49c] text-[#e8d49c] font-medium rounded hover:bg-[#e8d49c] hover:text-[#2d2d2d] transition flex justify-center items-center"
+          disabled={resending}
+        >
+          {resending ? (
+            <span>
+              <svg className="animate-spin h-5 w-5 inline-block mr-2 text-gray-700" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              Sending...
+            </span>
+          ) : 'Send Again'}
         </button>
       </div>
     </div>

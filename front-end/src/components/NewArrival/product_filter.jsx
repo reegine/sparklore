@@ -17,6 +17,13 @@ const formatIDR = (value) =>
     .toLocaleString("id-ID", { maximumFractionDigits: 2 })
     .replace(/,/g, ".") + ",00";
 
+// Helper: get date X months ago
+function getOneMonthAgoISO() {
+  const now = new Date();
+  now.setMonth(now.getMonth() - 1);
+  return now.toISOString();
+}
+
 export default function ProductNewArrival() {
   const navigate = useNavigate();
   const [layout, setLayout] = useState("grid");
@@ -27,8 +34,8 @@ export default function ProductNewArrival() {
     product: [],
     price: [],
   });
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [items, setItems] = useState([]); // Both products and charms
+  const [filteredItems, setFilteredItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [discountMap, setDiscountMap] = useState({});
@@ -70,18 +77,19 @@ export default function ProductNewArrival() {
     return { displayPrice, oldPrice, discountLabel };
   };
 
-  // Fetch products and discounts from API
+  // Fetch products, charms and discounts from API
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchNewArrivals = async () => {
+      setIsLoading(true);
       try {
+        // 1. Fetch all products & discounts
         const [productRes, discountRes] = await Promise.all([
           fetch(`${BASE_URL}/api/products/`),
           fetch(`${BASE_URL}/api/discount-campaigns/`)
         ]);
         if (!productRes.ok) throw new Error("Failed to fetch products");
-        const data = await productRes.json();
+        const productData = await productRes.json();
 
-        // Discount map: productId -> discountItem (string key for reliability)
         let discountData = [];
         if (discountRes.ok) {
           discountData = await discountRes.json();
@@ -98,8 +106,22 @@ export default function ProductNewArrival() {
         });
         setDiscountMap(discountMap);
 
-        // Transform products, sort by creation date (newest first)
-        const transformedProducts = data
+        // 2. Fetch all charms
+        const charmRes = await fetch(`${BASE_URL}/api/charms/`);
+        if (!charmRes.ok) throw new Error("Failed to fetch charms");
+        const charmData = await charmRes.json();
+
+        // 3. Calculate date range: from today to 1 month ago (ISO)
+        const today = new Date();
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(today.getMonth() - 1);
+
+        // 4. Transform product data, filter by 1 month, add badges/discount
+        const transformedProducts = productData
+          .filter((p) => {
+            const created = new Date(p.created_at || new Date());
+            return created >= oneMonthAgo && created <= today;
+          })
           .map(product => ({
             id: product.id,
             name: product.name,
@@ -111,36 +133,48 @@ export default function ProductNewArrival() {
             stock: product.stock,
             soldStock: product.sold_stok || 0,
             createdAt: product.created_at || new Date().toISOString(),
-            category: product.category
-          }))
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            category: product.category,
+            isCharm: false,
+            ...getDiscounted(product, discountMap)
+          }));
 
-        // Identify best sellers (top 10 by sold stock)
-        const bySoldStock = [...transformedProducts].sort((a, b) => b.soldStock - a.soldStock);
-        const bestSellerIds = bySoldStock.slice(0, 10).map(p => p.id);
+        // 5. Transform charm data, filter by 1 month, add badges/discount
+        const transformedCharms = charmData
+          .filter((c) => {
+            const created = new Date(c.created_at || new Date());
+            return created >= oneMonthAgo && created <= today;
+          })
+          .map(charm => {
+            const originalPrice = parseFloat(charm.price);
+            const discountPercentage = parseFloat(charm.discount || 0) / 100;
+            const discountedPrice = originalPrice - (originalPrice * discountPercentage);
+            const hasDiscount = parseFloat(charm.discount || 0) > 0;
+            return {
+              id: charm.id,
+              name: charm.name,
+              type: charm.category ? charm.category.toUpperCase() : "",
+              price: originalPrice,
+              discount: parseFloat(charm.discount || 0),
+              rating: Math.round(parseFloat(charm.rating || 0)),
+              image: charm.image,
+              stock: charm.stock,
+              soldStock: charm.sold_stok || 0,
+              createdAt: charm.created_at || new Date().toISOString(),
+              category: charm.category,
+              isCharm: true,
+              displayPrice: hasDiscount ? discountedPrice : originalPrice,
+              oldPrice: hasDiscount ? originalPrice : null,
+              discountLabel: hasDiscount ? `${parseFloat(charm.discount)}% OFF` : ""
+            };
+          });
 
-        // Identify new arrivals (top 10 most recent)
-        const byCreationDate = [...transformedProducts].sort((a, b) =>
-          new Date(b.createdAt) - new Date(a.createdAt));
-        const newArrivalIds = byCreationDate.slice(0, 10).map(p => p.id);
+        // 6. Combine and sort by newest
+        const allArrivals = [...transformedProducts, ...transformedCharms].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
 
-        // Identify oldest products (top 10 oldest)
-        const byCreationDateOldest = [...transformedProducts].sort((a, b) =>
-          new Date(a.createdAt) - new Date(b.createdAt));
-        const oldestIds = byCreationDateOldest.slice(0, 10).map(p => p.id);
-
-        // Add badge info and discount logic
-        const finalProducts = transformedProducts.map(product => ({
-          ...product,
-          isBestSeller: bestSellerIds.includes(product.id),
-          isNewArrival: newArrivalIds.includes(product.id),
-          isOldest: oldestIds.includes(product.id),
-          ...getDiscounted(product, discountMap)
-        }));
-
-        // By default arrival page shows most recent (newest first, possibly all)
-        setProducts(finalProducts);
-        setFilteredProducts(finalProducts);
+        setItems(allArrivals);
+        setFilteredItems(allArrivals);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -148,30 +182,36 @@ export default function ProductNewArrival() {
       }
     };
 
-    fetchProducts();
-    // eslint-disable-next-line
+    fetchNewArrivals();
   }, []);
 
   // Re-apply discount logic if products/discountMap changes
   useEffect(() => {
-    setFilteredProducts(
-      products.map(product => ({
+    setFilteredItems(
+      items.map(product => ({
         ...product,
-        ...getDiscounted(product)
+        ...(product.isCharm
+          ? {} // handled at mapping
+          : getDiscounted(product))
       }))
     );
     // eslint-disable-next-line
-  }, [products, discountMap]);
+  }, [items, discountMap]);
 
-  const handleProductClick = (productId) => {
-    navigate(`/products/${productId}`);
+  // Handle click: products vs charm
+  const handleProductClick = (item) => {
+    if (item.isCharm) {
+      navigate(`/products-charm/${item.id}`);
+    } else {
+      navigate(`/products/${item.id}`);
+    }
   };
 
   const productsPerPage = layout === "grid" ? 12 : 8;
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / productsPerPage);
 
   const startIndex = (currentPage - 1) * productsPerPage;
-  const currentProducts = filteredProducts.slice(
+  const currentProducts = filteredItems.slice(
     startIndex,
     startIndex + productsPerPage
   );
@@ -206,9 +246,9 @@ export default function ProductNewArrival() {
     setIsPopupOpen(false);
 
     // Filtering and sorting logic, with discount-aware prices
-    let filtered = products.map(product => ({
+    let filtered = items.map(product => ({
       ...product,
-      ...getDiscounted(product)
+      ...(product.isCharm ? {} : getDiscounted(product))
     }));
 
     if (filters.material.length > 0) {
@@ -227,13 +267,12 @@ export default function ProductNewArrival() {
       });
     }
 
-    // Use displayPrice for sorting!
     if (filters.price.includes("Low to High")) {
-      filtered.sort((a, b) => a.displayPrice - b.displayPrice);
+      filtered.sort((a, b) => (a.displayPrice || a.price) - (b.displayPrice || b.price));
     } else if (filters.price.includes("High to Low")) {
-      filtered.sort((a, b) => b.displayPrice - a.displayPrice);
+      filtered.sort((a, b) => (b.displayPrice || b.price) - (a.displayPrice || a.price));
     }
-    setFilteredProducts(filtered);
+    setFilteredItems(filtered);
     setCurrentPage(1);
   };
 
@@ -243,10 +282,7 @@ export default function ProductNewArrival() {
       product: [],
       price: [],
     });
-    setFilteredProducts(products.map(product => ({
-      ...product,
-      ...getDiscounted(product)
-    })));
+    setFilteredItems(items);
     setCurrentPage(1);
   };
 
@@ -292,7 +328,7 @@ export default function ProductNewArrival() {
           </button>
         </div>
         <p className="text-sm text-[#b1a696] tracking-wide">
-          {filteredProducts.length} Products
+          {filteredItems.length} Products
         </p>
         <button
           onClick={() => setIsPopupOpen(true)}
@@ -303,7 +339,7 @@ export default function ProductNewArrival() {
       </div>
 
       {/* Products Grid */}
-      {filteredProducts.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="flex justify-center items-center h-64">
           <p className="text-[#403c39] text-lg">Cannot Find The Product</p>
         </div>
@@ -314,25 +350,25 @@ export default function ProductNewArrival() {
               layout === "grid" ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
             } gap-6`}
           >
-            {currentProducts.map((product) => {
-              const { displayPrice, oldPrice, discountLabel } = getDiscounted(product);
-              const showBestSeller = product.isBestSeller;
-              const showDiscount = !!discountLabel;
-              const showNewArrival = product.isNewArrival;
+            {currentProducts.map((item) => {
+              // If it's a charm, use charm price logic, else product logic
+              const displayPrice = typeof item.displayPrice !== "undefined" ? item.displayPrice : item.price;
+              const oldPrice = item.oldPrice;
+              const discountLabel = item.discountLabel;
               return (
                 <div
-                  key={product.id}
+                  key={item.isCharm ? `charm-${item.id}` : `product-${item.id}`}
                   className={`p-2 rounded-lg hover:shadow-md transition duration-200 relative ${
-                    product.stock === 0 ? 'opacity-70' : 'cursor-pointer'
+                    item.stock === 0 ? 'opacity-70' : 'cursor-pointer'
                   }`}
-                  onClick={() => product.stock > 0 && handleProductClick(product.id)}
+                  onClick={() => item.stock > 0 && handleProductClick(item)}
                 >
                   <div className="relative">
                     <img
-                      src={product.image}
-                      alt={product.name}
+                      src={item.image}
+                      alt={item.name}
                       className={`rounded-md w-full h-auto object-cover ${
-                        product.stock === 0 ? 'grayscale' : ''
+                        item.stock === 0 ? 'grayscale' : ''
                       }`}
                       onError={(e) => {
                         e.target.onerror = null;
@@ -341,75 +377,25 @@ export default function ProductNewArrival() {
                     />
 
                     {/* Stock Status Badge */}
-                    {product.stock === 0 ? (
+                    {item.stock === 0 ? (
                       <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                         SOLD OUT
                       </div>
-                    ) : product.stock < 10 ? (
+                    ) : item.stock < 10 ? (
                       <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">
                         LOW STOCK
                       </div>
                     ) : null}
 
-                    {/* Best Seller, Discount, New Arrival Badges */}
-                    {/* If more than one badge, space vertically */}
-                    {showBestSeller && showDiscount && showNewArrival ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          BEST SELLER
-                        </div>
-                        <div className="absolute top-10 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          {discountLabel}
-                        </div>
-                        {/* <div className="absolute top-18 right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          NEW
-                        </div> */}
-                      </>
-                    ) : showBestSeller && showDiscount ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          BEST SELLER
-                        </div>
-                        <div className="absolute top-10 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          {discountLabel}
-                        </div>
-                      </>
-                    ) : showBestSeller && showNewArrival ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          BEST SELLER
-                        </div>
-                        {/* <div className="absolute top-10 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          NEW
-                        </div> */}
-                      </>
-                    ) : showDiscount && showNewArrival ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          {discountLabel}
-                        </div>
-                        {/* <div className="absolute top-10 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          NEW
-                        </div> */}
-                      </>
-                    ) : showBestSeller ? (
-                      <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                        BEST SELLER
-                      </div>
-                    ) : showDiscount ? (
+                    {/* Discount badge */}
+                    {discountLabel && (
                       <div className="absolute top-2 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
                         {discountLabel}
                       </div>
-                    ) 
-                    
-                    // : showNewArrival ? (
-                    //   <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                    //     NEW
-                    //   </div>
-                    : null}
+                    )}
 
                     {/* Only show add to cart button if product is in stock */}
-                    {product.stock > 0 && (
+                    {item.stock > 0 && (
                       <div className="absolute bottom-2 right-2 bg-white p-1 rounded-b-xs">
                         <button 
                           className="bg-white text-[#c3a46f] border border-[#c3a46f] p-1 rounded-full"
@@ -425,11 +411,11 @@ export default function ProductNewArrival() {
                   </div>
                   <div className="text-center mt-2">
                     <p className="text-sm font-semibold uppercase text-[#403c39] leading-tight">
-                      {product.name}
+                      {item.name}
                     </p>
                     <p className="text-[10px] mt-1">
                       <span className="px-2 py-[2px] text-[#c3a46f] bg-[#f1ede5] border border-[#c3a46f] rounded-sm">
-                        {product.type}
+                        {item.type}
                       </span>
                     </p>
                     <div className="flex justify-center mt-1">
@@ -441,14 +427,14 @@ export default function ProductNewArrival() {
                             size={14}
                             className={cn(
                               "mx-[1px]",
-                              i < product.rating
+                              i < item.rating
                                 ? "text-yellow-500"
                                 : "text-gray-300"
                             )}
                           />
                         ))}
                       <span className="text-xs text-gray-500 ml-1">
-                        ({product.rating.toFixed(1)})
+                        ({item.rating && item.rating.toFixed ? item.rating.toFixed(1) : item.rating})
                       </span>
                     </div>
                     <div className="mt-1">
@@ -463,7 +449,7 @@ export default function ProductNewArrival() {
                     </div>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
 
