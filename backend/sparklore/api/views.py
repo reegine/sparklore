@@ -4,13 +4,14 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Charm, DiscountCampaign, NewsletterSubscriber, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
+from .models import Charm, DiscountCampaign, NewsletterSubscriber, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner, GiftSet #Payment
 from .serializers import (
     CharmSerializer, DiscountCampaignSerializer, ProductSerializer,
     CartSerializer, CartItemSerializer,
     OrderSerializer, NewsletterSubscriberSerializer,
     ReviewSerializer, VideoContentSerializer,
-    PageBannerSerializer, PhotoGalerySerializer #PaymentSerializer
+    PageBannerSerializer, PhotoGalerySerializer,
+    GiftSetProductSerializer  #PaymentSerializer
 )
 # from .services import MidtransService, RajaOngkirService
 from django.db import transaction
@@ -34,6 +35,14 @@ class OrderViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'category', 'label']
+    ordering_fields = ['price', 'rating']
+
+class GiftSetViewSet(viewsets.ModelViewSet):
+    queryset = GiftSet.objects.all()
+    serializer_class = GiftSetProductSerializer
     permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'category', 'label']

@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Charm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
+from .models import Charm, GiftSet, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
 from django.core.mail import send_mail
 User = get_user_model()
 from django.conf import settings
@@ -131,6 +131,23 @@ class ReviewSerializer(serializers.ModelSerializer):
         if value < 1 or value > 5:
             raise serializers.ValidationError("Rating harus antara 1 dan 5.")
         return value
+
+class ProductInGiftSetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'category', 'price', 'label']
+
+class GiftSetProductSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    products = ProductInGiftSetSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = GiftSet
+        fields = '__all__'
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if obj.image else None
     
 class CartItemCharmSerializer(serializers.ModelSerializer):
     class Meta: model = CartItemCharm; fields = ['charm_id']
