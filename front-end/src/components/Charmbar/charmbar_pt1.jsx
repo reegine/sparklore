@@ -7,7 +7,9 @@ import { BASE_URL, fetchProduct } from "../../utils/api";
 // BASE IMAGES
 import baseNecklace from "../../assets/default/basenecklace.png";
 
-// Function to format numbers as Indonesian Rupiah
+// Metal sound effect (you need to put a short .mp3/.wav file in your public/assets or src/assets)
+import metalSfx from "../../assets/audio/metal_sfx2.mp3"; // <-- you must provide this file
+
 const formatIDR = (amount) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -15,7 +17,6 @@ const formatIDR = (amount) => {
     minimumFractionDigits: 0
   }).format(Math.round(amount));
 };
-
 
 export default function CharmCustomizerFull() {
   const necklaceRef = useRef(null);
@@ -35,6 +36,21 @@ export default function CharmCustomizerFull() {
   const [error, setError] = useState(null);
   const [selectedBaseProduct, setSelectedBaseProduct] = useState(null);
   const navigate = useNavigate();
+
+  // --- Metal sound effect ---
+  const metalAudioRef = useRef(null);
+  useEffect(() => {
+    metalAudioRef.current = new Audio(metalSfx);
+    metalAudioRef.current.volume = 0.5;
+  }, []);
+
+  const playMetalSound = () => {
+    if (metalAudioRef.current) {
+      // Restart sound on every trigger
+      metalAudioRef.current.currentTime = 0;
+      metalAudioRef.current.play();
+    }
+  };
 
   // Fetch charms and products data from API
   useEffect(() => {
@@ -65,7 +81,6 @@ export default function CharmCustomizerFull() {
   // Helper function to get the last image URL from a product
   const getLastProductImage = (product) => {
     if (product.images && product.images.length > 0) {
-      // Get the last image in the array
       return product.images[product.images.length - 1].image_url;
     }
     return '../../assets/default/banner_home.jpeg';
@@ -80,20 +95,20 @@ export default function CharmCustomizerFull() {
   };
 
   // Filter products by category and charms:true
-const filterProductsByCategory = (category) => {
-  return productsData
-    .filter(product => product.category === category && product.charms === true)
-    .map(product => ({
-      id: product.id,
-      img: getFirstProductImage(product), // Use first image
-      lastImg: getLastProductImage(product), // Use last image
-      text: product.name,
-      price: parseFloat(product.price),
-      discount_price: product.discount_price ? parseFloat(product.discount_price) : null, // <--- ADD THIS LINE
-      stock: product.stock,
-      category: product.category
-    }));
-};
+  const filterProductsByCategory = (category) => {
+    return productsData
+      .filter(product => product.category === category && product.charms === true)
+      .map(product => ({
+        id: product.id,
+        img: getFirstProductImage(product),
+        lastImg: getLastProductImage(product),
+        text: product.name,
+        price: parseFloat(product.price),
+        discount_price: product.discount_price ? parseFloat(product.discount_price) : null,
+        stock: product.stock,
+        category: product.category
+      }));
+  };
 
   // Group charms by category
   const groupCharmsByCategory = () => {
@@ -109,7 +124,7 @@ const filterProductsByCategory = (category) => {
 
   const handleBaseProductSelect = (product) => {
     setSelectedBaseProduct(product);
-    setBaseImage(product.lastImg); // This will be the last image already
+    setBaseImage(product.lastImg);
   };
 
   const scroll = (ref, direction) => {
@@ -122,11 +137,13 @@ const filterProductsByCategory = (category) => {
     }
   };
 
+  // Play metal sound and select charm
   const handleCharmSelect = (charm) => {
     setSelectedCharms((prev) => ({
       ...prev,
       [selectedTab]: charm,
     }));
+    playMetalSound();
     if (selectedTab < charmCount) {
       setSelectedTab((prev) => prev + 1);
     }
@@ -135,14 +152,12 @@ const filterProductsByCategory = (category) => {
   // Helper function to get the correct price after discount
   const getDiscountedPrice = (product) => {
     if (!product) return 0;
-    // Assuming discount_price is present and valid
     if (product.discount_price && parseFloat(product.discount_price) > 0) {
       return parseFloat(product.discount_price);
     }
     return parseFloat(product.price) || 0;
   };
 
-  // Helper function to display base product price with discount
   const BaseProductItem = ({ product }) => (
     <div 
       key={product.id} 
@@ -167,7 +182,6 @@ const filterProductsByCategory = (category) => {
       ) : null}
       <div className="absolute inset-0 bg-[#f5f5dc] opacity-0 group-hover:opacity-80 flex flex-col justify-center items-center transition-opacity">
         <span className="text-lg font-bold text-center">{product.text}</span>
-        {/* Discount price display */}
         {product.discount_price && parseFloat(product.discount_price) > 0 && parseFloat(product.discount_price) < parseFloat(product.price) ? (
           <span className="text-sm">
             <span className="line-through text-gray-400">{formatIDR(product.price)}</span>
@@ -193,7 +207,6 @@ const filterProductsByCategory = (category) => {
         transform: 'translate(-50%, -50%) rotate(0deg)'
       };
     }
-
     if (total === 2) {
       const rotationAngle = index === 0 ? 30 : -40;
       return {
@@ -204,7 +217,6 @@ const filterProductsByCategory = (category) => {
         transform: `translate(-50%, -50%) rotate(${rotationAngle}deg)`
       };
     }
-    
     if (total === 3) {
       const positions = [
         { left: '43%', top: '71%', rotation: 30 },
@@ -219,7 +231,6 @@ const filterProductsByCategory = (category) => {
         transform: `translate(-50%, -50%) rotate(${positions[index].rotation}deg)`
       };
     }
-
     if (total === 4) {
       const positions = [
         { left: '41%', top: '70%', rotation: 40 },
@@ -235,7 +246,6 @@ const filterProductsByCategory = (category) => {
         transform: `translate(-50%, -50%) rotate(${positions[index].rotation}deg)`
       };
     }
-
     if (total === 5) {
       const positions = [
         { left: '41%', top: '70%', rotation: 40 },
@@ -252,7 +262,6 @@ const filterProductsByCategory = (category) => {
         transform: `translate(-50%, -50%) rotate(${positions[index].rotation}deg)`
       };
     }
-
     return {
       width: baseSize,
       height: baseSize,
@@ -283,11 +292,9 @@ const filterProductsByCategory = (category) => {
   const bracelets = filterProductsByCategory('bracelet');
   const recommend = [...necklaces.slice(0, 3), ...bracelets.slice(0, 2)];
 
-  // Check if we should show necklace or bracelet sections
   const showNecklaces = necklaces.length > 0;
   const showBracelets = bracelets.length > 0;
 
-  // Calculate total price, using discount if available
   const calculateTotalPrice = () => {
     let total = getDiscountedPrice(selectedBaseProduct);
     for (let i = 1; i <= charmCount; i++) {
@@ -298,6 +305,7 @@ const filterProductsByCategory = (category) => {
     }
     return total;
   };
+
 
 
   return (

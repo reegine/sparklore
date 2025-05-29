@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronDown } from "lucide-react";
 import clsx from "clsx";
 import { BASE_URL, fetchProduct, fetchAllCharms, isLoggedIn } from "../../utils/api";
 
-// Function to format numbers as Indonesian Rupiah
+// Import your metal sound effect
+import metalSfx from "../../assets/audio/metal_sfx2.mp3";
+
 const formatIDR = (amount) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -29,6 +31,19 @@ const ProductDetailCharmBar = () => {
   const [charmsData, setCharmsData] = useState([]);
   const [charmLoading, setCharmLoading] = useState(true);
 
+  // Audio ref for metal sound effect
+  const metalAudioRef = useRef(null);
+  useEffect(() => {
+    metalAudioRef.current = new Audio(metalSfx);
+    metalAudioRef.current.volume = 0.5;
+  }, []);
+  const playMetalSound = () => {
+    if (metalAudioRef.current) {
+      metalAudioRef.current.currentTime = 0;
+      metalAudioRef.current.play();
+    }
+  };
+
   // Login popup state
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isLoggedInState, setIsLoggedInState] = useState(false);
@@ -36,7 +51,6 @@ const ProductDetailCharmBar = () => {
   // Check login state on mount and when auth changes
   useEffect(() => {
     setIsLoggedInState(isLoggedIn());
-    // Listen for storage changes for login state
     const handleStorageChange = (e) => {
       if (e.key === 'authData') {
         setIsLoggedInState(isLoggedIn());
@@ -49,18 +63,13 @@ const ProductDetailCharmBar = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch product data
         const productData = await fetchProduct(productId);
         setProduct(productData);
 
-        // Only proceed if product has charms enabled
         if (productData.charms) {
-          // Set base image to the last image in the product's image list
           if (productData.images && productData.images.length > 0) {
             setBaseImage(productData.images[productData.images.length - 1].image_url);
           }
-
-          // Fetch charms data
           const charms = await fetchAllCharms();
           setCharmsData(charms);
         }
@@ -89,7 +98,6 @@ const ProductDetailCharmBar = () => {
         transform: 'translate(-50%, -50%) rotate(0deg)'
       };
     }
-
     if (total === 2) {
       const rotationAngle = index === 0 ? 30 : -40;
       return {
@@ -100,7 +108,6 @@ const ProductDetailCharmBar = () => {
         transform: `translate(-50%, -50%) rotate(${rotationAngle}deg)`
       };
     }
-
     if (total === 3) {
       const positions = [
         { left: '43%', top: '71%', rotation: 30 },
@@ -115,7 +122,6 @@ const ProductDetailCharmBar = () => {
         transform: `translate(-50%, -50%) rotate(${positions[index].rotation}deg)`
       };
     }
-
     if (total === 4) {
       const positions = [
         { left: '41%', top: '70%', rotation: 40 },
@@ -131,7 +137,6 @@ const ProductDetailCharmBar = () => {
         transform: `translate(-50%, -50%) rotate(${positions[index].rotation}deg)`
       };
     }
-
     if (total === 5) {
       const positions = [
         { left: '41%', top: '70%', rotation: 40 },
@@ -148,7 +153,6 @@ const ProductDetailCharmBar = () => {
         transform: `translate(-50%, -50%) rotate(${positions[index].rotation}deg)`
       };
     }
-
     return {
       width: baseSize,
       height: baseSize,
@@ -182,28 +186,26 @@ const ProductDetailCharmBar = () => {
     return total;
   };
 
+  // Play sound effect on charm select!
   const handleCharmSelect = (charm) => {
     setSelectedCharms((prev) => ({
       ...prev,
       [selectedTab]: charm,
     }));
+    playMetalSound();
     if (selectedTab < charmCount) {
       setSelectedTab((prev) => prev + 1);
     }
   };
 
-  // Add to cart button handler with login check
   const handleAddToCart = () => {
     if (!isLoggedIn()) {
       setShowLoginPrompt(true);
       return;
     }
-    // Place add-to-cart logic here...
-    // For now, maybe show a confirmation or snackbar.
     alert("Added to cart! (Implement actual logic here)");
   };
 
-  // Login Prompt Handler
   const handleCloseLoginPrompt = () => setShowLoginPrompt(false);
 
   if (loading || charmLoading) {
@@ -222,18 +224,9 @@ const ProductDetailCharmBar = () => {
     );
   }
 
-  // If product doesn't have charms enabled, redirect or show message
   if (!product?.charms) {
     return (
-      <div className="bg-[#faf7f0] flex justify-center items-center lg:pt-[9rem]">
-        {/* <p>This product does not support charm customization.</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="ml-4 px-4 py-2 bg-[#e6d5a7] rounded"
-        >
-          Go Back
-        </button> */}
-      </div>
+      <div className="bg-[#faf7f0] flex justify-center items-center lg:pt-[9rem]"></div>
     );
   }
 
@@ -241,7 +234,7 @@ const ProductDetailCharmBar = () => {
 
   return (
     <div className="bg-[#fdf9f0] py-[2rem]" id="product-detail-charm-bar" tabIndex={-1}>
-      {/* Login Prompt Popup */}
+      <audio ref={metalAudioRef} src={metalSfx} preload="auto" />
       {showLoginPrompt && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
@@ -271,7 +264,6 @@ const ProductDetailCharmBar = () => {
       )}
 
       <div className="font-sans px-6 pt-10 max-w-6xl mx-auto">
-        {/* Pick charm count */}
         <h2 className="text-2xl font-serif font-semibold mb-4">CUSTOMIZE YOUR CHARM</h2>
         <div className="flex flex-wrap gap-2 mb-6">
           {[1, 2, 3, 4, 5].map((num) => (
@@ -293,7 +285,6 @@ const ProductDetailCharmBar = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Preview */}
           <div className="bg-white rounded p-4 relative overflow-hidden" style={{ width: '100%', maxWidth: '500px', aspectRatio: '1/1' }}>
             <div className="relative w-full h-full flex items-center justify-center">
               <div className="relative" style={{ width: '100%', height: '100%' }}>
@@ -339,7 +330,6 @@ const ProductDetailCharmBar = () => {
             </div>
           </div>
 
-          {/* Charm picker and total price */}
           <div className="flex-1">
             <div className="text-2xl font-semibold mb-4">
               {formatIDR(calculateTotalPrice())}

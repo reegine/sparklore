@@ -204,7 +204,7 @@ const ProductDetailSets = () => {
               <button
                 aria-label="Previous image"
                 onClick={handlePrev}
-                className="absolute left-2 top-1/3 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
                 style={{outline: 0}}
               >
                 <ArrowIcon direction="left" />
@@ -219,7 +219,7 @@ const ProductDetailSets = () => {
               <button
                 aria-label="Next image"
                 onClick={handleNext}
-                className="absolute right-2 top-1/3 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
                 style={{outline: 0}}
               >
                 <ArrowIcon direction="right" />

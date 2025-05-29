@@ -27,7 +27,6 @@ const ArrowIcon = ({ direction = "left" }) => (
 );
 
 const ProductDetail = (props) => {
-  // Accept productId from either prop or URL param for compatibility
   const urlParams = useParams();
   const productId = props.productId || urlParams.productId;
   const navigate = useNavigate();
@@ -45,13 +44,12 @@ const ProductDetail = (props) => {
   const [isLoggedInState, setIsLoggedInState] = useState(false);
   const [showArrows, setShowArrows] = useState(false);
 
-  // NEW: ref for ProductDetailCharmBar section
-  const charmBarRef = useRef(null);
+  // Refs for scrollable containers
+  const thumbnailContainerRef = useRef(null);
 
   // check login state on mount and when auth changes
   useEffect(() => {
     setIsLoggedInState(isLoggedIn());
-    // Listen for storage changes for login state (keep in sync between tabs)
     const handleStorageChange = (e) => {
       if (e.key === 'authData') {
         setIsLoggedInState(isLoggedIn());
@@ -61,23 +59,19 @@ const ProductDetail = (props) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Fetch product and discount information
   useEffect(() => {
     const fetchProductAndDiscount = async () => {
       try {
-        // Fetch the product
         const response = await fetch(`${BASE_URL}/api/products/${productId}/`);
         if (!response.ok) {
           throw new Error('Failed to fetch product');
         }
         const data = await response.json();
-        // Ensure charms_detail exists as an array
         if (!data.charms_detail) {
           data.charms_detail = [];
         }
         setProduct(data);
 
-        // Set the first image as main image if available
         if (data.images && data.images.length > 0) {
           setMainImage(data.images[0].image_url);
           setMainIdx(0);
@@ -112,17 +106,15 @@ const ProductDetail = (props) => {
     fetchProductAndDiscount();
   }, [productId]);
 
-  // Handler for Add to Cart or Customize (checks login)
   const handleAddToCart = () => {
     if (!isLoggedIn()) {
-      setShowLoginPrompt(true); // Show login required popup if not logged in
+      setShowLoginPrompt(true);
       return;
     }
     setShowPopup(true);
     setShowCharms(true);
   };
 
-  // NEW: Handler for Customize button to scroll to CharmBar
   const handleCustomize = () => {
     const charmBarSection = document.getElementById('product-detail-charm-bar');
     if (charmBarSection) {
@@ -138,10 +130,8 @@ const ProductDetail = (props) => {
   const handleNoteSubmit = () => {
     setShowNote(false);
     setShowPopup(false);
-    // Submit note here if needed
   };
 
-  // Login Prompt Handler
   const handleCloseLoginPrompt = () => setShowLoginPrompt(false);
 
   // Thumbnail navigation logic
@@ -149,6 +139,9 @@ const ProductDetail = (props) => {
     ? product.images.map(img => img.image_url) 
     : [];
   const totalImages = thumbnails.length;
+
+  // Make thumbnail scrollable if more than 6 images
+  const isThumbnailScrollable = thumbnails.length > 6;
 
   // If the mainImage is changed via thumbnail, update idx
   useEffect(() => {
@@ -175,10 +168,9 @@ const ProductDetail = (props) => {
   // Parse details string to display as bullet points
   const getDetailsList = (detailsStr) => {
     if (!detailsStr) return [];
-    // Split by newline and remove empty/whitespace-only lines, trim leading/trailing
     return detailsStr
       .split('\n')
-      .map(line => line.replace(/^\s*-\s*/, '').trim()) // Remove any leading "- " and trim
+      .map(line => line.replace(/^\s*-\s*/, '').trim())
       .filter(line => line.length > 0);
   };
 
@@ -206,7 +198,6 @@ const ProductDetail = (props) => {
     );
   }
 
-  // Compute discounted price and badge
   let displayPrice = parseFloat(product.price);
   let oldPrice = null;
   let discountLabel = "";
@@ -232,19 +223,15 @@ const ProductDetail = (props) => {
     discountLabel = `${discountValue}% OFF`;
   }
 
-  // Button width constants
-  const BTN_RATIO = "w-[26%]";
+  const BTN_RATIO = "w-[50%] md:w-[26%]";
   const BTN_SINGLE = "w-[53%]";
 
-  // Prepare details bullet points
   const detailList = getDetailsList(product.details);
 
   return (
     <div className='bg-[#faf7f0] relative'>
       {/* ...Popups... (unchanged) */}
-
       <div className="max-w-7xl mx-auto px-6 md:px-16 py-10 font-serif text-[#2d2a26]">
-        {/* Breadcrumb */}
         <div className="text-sm text-gray-400 mb-4">
           Home &gt; <span className="text-gray-500">{product.category}</span> &gt; <span className="text-black font-medium">{product.name}</span>
         </div>
@@ -252,7 +239,19 @@ const ProductDetail = (props) => {
         <div className="flex flex-col md:flex-row gap-10">
           {/* Thumbnail Images */}
           {thumbnails.length > 0 && (
-            <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-visible pb-2 order-2 md:order-1">
+            <div
+              className={`flex md:flex-col gap-4 pb-2 order-2 md:order-1 ${
+                isThumbnailScrollable
+                  ? 'md:max-h-[5rem] md:overflow-y-auto scrollbar-thin scrollbar-thumb-[#e6d4a5] scrollbar-track-[#faf7f0]'
+                  : 'md:overflow-visible'
+              }`}
+              ref={thumbnailContainerRef}
+              style={
+                isThumbnailScrollable
+                  ? { maxHeight: '440px', minHeight: '110px' }
+                  : {}
+              }
+            >
               {thumbnails.map((src, idx) => (
                 <img
                   key={idx}
@@ -272,7 +271,7 @@ const ProductDetail = (props) => {
             </div>
           )}
 
-          {/* Main Product Image with arrows (show arrows only on hover) */}
+          {/* Main Product Image with arrows */}
           <div
             className="flex-1 order-1 md:order-2 relative flex items-start justify-start group"
             onMouseEnter={() => setShowArrows(true)}
@@ -282,7 +281,7 @@ const ProductDetail = (props) => {
               <button
                 aria-label="Previous image"
                 onClick={handlePrev}
-                className="absolute left-2 top-1/3 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
                 style={{outline: 0}}
               >
                 <ArrowIcon direction="left" />
@@ -301,14 +300,13 @@ const ProductDetail = (props) => {
               <button
                 aria-label="Next image"
                 onClick={handleNext}
-                className="absolute right-2 top-1/3 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
                 style={{outline: 0}}
               >
                 <ArrowIcon direction="right" />
               </button>
             )}
           </div>
-          
 
           {/* Product Info */}
           <div className="flex-1 order-3">
@@ -317,7 +315,6 @@ const ProductDetail = (props) => {
               {product.label.toUpperCase()}
             </div>
             <div className="mb-4">
-              {/* Discount section */}
               {discountLabel ? (
                 <div>
                   <span className="text-lg font-bold text-red-500 mr-2">{formatIDR(displayPrice)}</span>
@@ -331,9 +328,18 @@ const ProductDetail = (props) => {
             
             <div className="md:hidden border-t border-gray-200 my-4"></div>
 
-            <p className="text-base text-[#4d4a45] mb-4 leading-relaxed">
+            {/* Scrollable description if too long */}
+            <div
+              className="text-base text-[#4d4a45] mb-4 leading-relaxed"
+              style={{
+                maxHeight: '280px',
+                overflowY: 'auto',
+                minHeight: '56px',
+                paddingRight: '6px'
+              }}
+            >
               {product.description}
-            </p>
+            </div>
 
             <div className="text-sm">
               <p className="mb-1 font-medium">Product Details</p>
@@ -416,6 +422,18 @@ const ProductDetail = (props) => {
           )}
         </div>
       </div>
+      {/* Custom scrollbar styling (Tailwind CSS 'scrollbar-thin' etc. or add your custom CSS) */}
+      <style>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        .scrollbar-thumb-[#e6d4a5]::-webkit-scrollbar-thumb {
+          background: #e6d4a5;
+        }
+        .scrollbar-track-[#faf7f0]::-webkit-scrollbar-track {
+          background: #faf7f0;
+        }
+      `}</style>
     </div>
   );
 };
