@@ -51,7 +51,7 @@ class Product(models.Model):
         ('earring', 'Earring'),
         ('ring', 'Ring'),
         ('anklet', 'Anklet'),
-        ('gift_set', 'Gift Set'),
+        ('jewel_set', 'Jewel Set'),
         ('charm', 'Charm'),
     ]
 
