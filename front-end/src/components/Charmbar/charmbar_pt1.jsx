@@ -307,7 +307,7 @@ const filterProductsByCategory = (category) => {
         {/* NECKLACES - Only show if there are necklaces with charms:true */}
         {showNecklaces && (
           <>
-            <h2 className="text-2xl font-serif font-semibold mb-6">SELECT A NECKLACE (OPTIONAL)</h2>
+            <h2 className="text-2xl font-serif font-semibold mb-6">SELECT A NECKLACE</h2>
             <div className="relative mb-10">
               <button onClick={() => scroll(necklaceRef, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2">
                 <ChevronLeft size={28} />
@@ -327,7 +327,7 @@ const filterProductsByCategory = (category) => {
         {/* BRACELETS - Only show if there are bracelets with charms:true */}
         {showBracelets && (
           <>
-            <h2 className="text-2xl font-serif font-semibold mt-12 mb-6">OR SELECT A BRACELET (OPTIONAL)</h2>
+            <h2 className="text-2xl font-serif font-semibold mt-12 mb-6">OR SELECT A BRACELET</h2>
             <div className="relative mb-10">
               <button onClick={() => scroll(braceletRef, "left")} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2">
                 <ChevronLeft size={28} />

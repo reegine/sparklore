@@ -18,7 +18,7 @@ const ValentinesPromo = () => {
             Celebrate Love with a <br /> Timeless Gift
           </h2>
           <p className="text-[#4d4a45] mt-4 text-base md:text-lg leading-relaxed text-center">
-            Make this Valentine’s unforgettable with a personalized jewellery set, crafted to tell your unique love story.
+            Make this Month unforgettable with a personalized jewellery set, crafted to tell your unique love story.
           </p>
           <button
             className="mt-6 px-6 py-3 border-2 border-[#f6e3b8] rounded-md text-[#2d2a26] font-medium hover:bg-[#f6e3b8] transition"

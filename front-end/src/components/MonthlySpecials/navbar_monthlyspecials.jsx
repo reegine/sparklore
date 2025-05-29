@@ -69,7 +69,7 @@ const NavBar_MonthlySpecials = () => {
 
     const getBannerImage = async () => {
       try {
-        const imageUrl = await fetchPageBanner("necklace"); // Fetch banner for charmbar
+        const imageUrl = await fetchPageBanner("monthly_special"); // Fetch banner for charmbar
         setBannerImage(imageUrl);
       } catch (error) {
         console.error("Error fetching banner image:", error);

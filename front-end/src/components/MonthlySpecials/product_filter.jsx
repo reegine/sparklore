@@ -24,7 +24,7 @@ export default function ProductGrid() {
 
         // Only keep those with "label": "forHim" (case-insensitive)
         const filtered = data
-          .filter((item) => item.label && item.label.toLowerCase() === "bundle")
+          .filter((item) => item.label && item.label.toLowerCase() === "monthlyspecial")
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         setGiftSets(filtered);
@@ -137,7 +137,7 @@ export default function ProductGrid() {
                 </p>
                 <p className="text-[10px] mt-1">
                   <span className="px-2 py-[2px] text-[#c3a46f] bg-[#f1ede5] border border-[#c3a46f] rounded-sm">
-                    For Her Gift Set
+                    Monthly Special
                   </span>
                 </p>
                 <div className="mt-1">

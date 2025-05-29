@@ -101,7 +101,7 @@ export default function ProductGrid() {
           </button>
         </div>
         <p className="text-sm text-[#b1a696] tracking-wide">
-          {giftSets.length} Gift Sets For Her
+          {giftSets.length} Gift Sets For Him
         </p>
       </div>
 
@@ -137,7 +137,7 @@ export default function ProductGrid() {
                 </p>
                 <p className="text-[10px] mt-1">
                   <span className="px-2 py-[2px] text-[#c3a46f] bg-[#f1ede5] border border-[#c3a46f] rounded-sm">
-                    For Her Gift Set
+                    For Him Gift Set
                   </span>
                 </p>
                 <div className="mt-1">

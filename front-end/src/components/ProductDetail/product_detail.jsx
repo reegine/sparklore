@@ -150,8 +150,6 @@ const ProductDetail = (props) => {
     : [];
   const totalImages = thumbnails.length;
 
-  // Find the main image index
-  let currentIdx = mainIdx;
   // If the mainImage is changed via thumbnail, update idx
   useEffect(() => {
     if (mainImage && thumbnails.length > 0) {
@@ -172,6 +170,16 @@ const ProductDetail = (props) => {
     const nextIdx = (mainIdx + 1) % totalImages;
     setMainIdx(nextIdx);
     setMainImage(thumbnails[nextIdx]);
+  };
+
+  // Parse details string to display as bullet points
+  const getDetailsList = (detailsStr) => {
+    if (!detailsStr) return [];
+    // Split by newline and remove empty/whitespace-only lines, trim leading/trailing
+    return detailsStr
+      .split('\n')
+      .map(line => line.replace(/^\s*-\s*/, '').trim()) // Remove any leading "- " and trim
+      .filter(line => line.length > 0);
   };
 
   if (loading) {
@@ -228,6 +236,9 @@ const ProductDetail = (props) => {
   const BTN_RATIO = "w-[26%]";
   const BTN_SINGLE = "w-[53%]";
 
+  // Prepare details bullet points
+  const detailList = getDetailsList(product.details);
+
   return (
     <div className='bg-[#faf7f0] relative'>
       {/* ...Popups... (unchanged) */}
@@ -271,7 +282,7 @@ const ProductDetail = (props) => {
               <button
                 aria-label="Previous image"
                 onClick={handlePrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                className="absolute left-2 top-1/3 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
                 style={{outline: 0}}
               >
                 <ArrowIcon direction="left" />
@@ -290,7 +301,7 @@ const ProductDetail = (props) => {
               <button
                 aria-label="Next image"
                 onClick={handleNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                className="absolute right-2 top-1/3 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
                 style={{outline: 0}}
               >
                 <ArrowIcon direction="right" />
@@ -327,10 +338,18 @@ const ProductDetail = (props) => {
             <div className="text-sm">
               <p className="mb-1 font-medium">Product Details</p>
               <ul className="list-disc pl-5 text-[#4d4a45]">
-                <li>Material: {product.label}</li>
-                <li>Stock: {product.stock} available</li>
-                {product.charms_detail && product.charms_detail.length > 0 && (
-                  <li>Compatible charms: {product.charms_detail.map(c => c.name).join(', ')}</li>
+                {detailList.length > 0 ? (
+                  detailList.map((detail, idx) => (
+                    <li key={idx}>{detail}</li>
+                  ))
+                ) : (
+                  <>
+                    <li>Material: {product.label}</li>
+                    <li>Stock: {product.stock} available</li>
+                    {product.charms_detail && product.charms_detail.length > 0 && (
+                      <li>Compatible charms: {product.charms_detail.map(c => c.name).join(', ')}</li>
+                    )}
+                  </>
                 )}
               </ul>
             </div>
