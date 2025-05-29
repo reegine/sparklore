@@ -180,5 +180,4 @@ class DiscountCampaignViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        now = timezone.now()
-        return DiscountCampaign.objects.filter(start_time__lte=now, end_time__gte=now)
+        return DiscountCampaign.objects.all()
