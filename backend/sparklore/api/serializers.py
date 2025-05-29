@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Charm, GiftSet, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
+from .models import Charm, GiftSetOrBundleMonthlySpecial, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
 from django.core.mail import send_mail
 User = get_user_model()
 from django.conf import settings
@@ -90,7 +90,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    gift_set_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
+    jewel_set_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
     images = ProductImageSerializer(many=True, read_only=True)
 
     class Meta:
@@ -100,16 +100,16 @@ class ProductSerializer(serializers.ModelSerializer):
     def validate(self, data):
         category = data.get('category', None)
         charms = data.get('charms', [])
-        gift_set_products = data.get('gift_set_products', [])
+        jewel_set_products = data.get('jewel_set_products', [])
 
         if category == 'gift_set':
-            if not gift_set_products:
+            if not jewel_set_products:
                 raise serializers.ValidationError("Gift set harus berisi minimal satu produk.")
-            for p in gift_set_products:
+            for p in jewel_set_products:
                 if p.category not in ['necklace', 'bracelet', 'earring', 'ring', 'anklet']:
                     raise serializers.ValidationError(f"Produk gift set hanya boleh berisi kategori: necklace, bracelet, earring, ring, anklet.")
         else:
-            if gift_set_products:
+            if jewel_set_products:
                 raise serializers.ValidationError("Field gift_set_products hanya boleh diisi untuk kategori 'gift_set'.")
             
         return data
@@ -137,18 +137,18 @@ class ProductInGiftSetSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'category', 'price', 'label']
 
-class GiftSetProductSerializer(serializers.ModelSerializer):
+class GiftSetOrBundleMonthlySpecialProductSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     products = ProductInGiftSetSerializer(many=True, read_only=True)
 
     class Meta:
-        model = GiftSet
+        model = GiftSetOrBundleMonthlySpecial
         fields = '__all__'
 
     def get_image_url(self, obj):
         request = self.context.get('request')
         return request.build_absolute_uri(obj.image.url) if obj.image else None
-    
+
 class CartItemCharmSerializer(serializers.ModelSerializer):
     class Meta: model = CartItemCharm; fields = ['charm_id']
 

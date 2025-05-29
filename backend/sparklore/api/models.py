@@ -75,8 +75,8 @@ class Product(models.Model):
     discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     charms = models.BooleanField(default=False, help_text="Apakah produk ini memiliki charms?")
 
-    # Produk di dalam gift set
-    gift_set_products = models.ManyToManyField('self', blank=True, symmetrical=False)
+    # Produk di dalam jewel set
+    jewel_set_products = models.ManyToManyField('self', blank=True, symmetrical=False)
 
     def __str__(self):
         return f"{self.name} ({self.category})"
@@ -97,12 +97,13 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f"Gambar untuk {self.product.name}"
-    
-class GiftSet(models.Model):
+
+class GiftSetOrBundleMonthlySpecial(models.Model):
     LABEL_CHOICES = [
         ('forUs', 'For Us'),
         ('forHer', 'For Her'),
         ('forHim', 'For Him'),
+        ('monthlySpecial', 'Monthly Special'),
         ('null', 'Null'),
     ]
 
@@ -113,6 +114,7 @@ class GiftSet(models.Model):
     products = models.ManyToManyField(Product, related_name='gift_sets')
     image = models.ImageField(upload_to='gift_sets/')
     created_at = models.DateTimeField(auto_now_add=True)
+    is_monthly_special = models.BooleanField(default=True, help_text="Apakah ini adalah produk spesial bulanan?")
 
     def __str__(self):
         return self.name
@@ -213,6 +215,7 @@ class PageBanner(models.Model):
         ('rings', 'Rings'),
         ('anklets', 'Anklets'),
         ('gift_sets', 'Gift Sets'),
+        ('monthly_special', 'Monthly Special'),
     ]
 
     page = models.CharField(max_length=30, choices=PAGE_CHOICES, unique=True)
