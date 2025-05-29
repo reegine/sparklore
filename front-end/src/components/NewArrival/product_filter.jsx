@@ -15,7 +15,7 @@ const formatIDR = (value) =>
   "Rp " +
   Number(value)
     .toLocaleString("id-ID", { maximumFractionDigits: 2 })
-    .replace(/,/g, ".") + ",00";
+    .replace(/,/g, ".");
 
 // Helper: get date X months ago
 function getOneMonthAgoISO() {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAuthData, BASE_URL } from '../../utils/api';
+import { getAuthData, BASE_URL, subscribeToNewsletter } from '../../utils/api';
 
 // Checkbox component
 const Checkbox = ({ id, ...props }) => (
@@ -17,6 +17,8 @@ const FinalCheckout = () => {
   const navigate = useNavigate();
   const orderDetails = location.state?.orderDetails;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
+  const [newsletterError, setNewsletterError] = useState('');
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     cardName: '',
@@ -27,10 +29,7 @@ const FinalCheckout = () => {
     differentAddress: false
   });
 
-  console.log("Received order details:", orderDetails);
-
-
-    if (!orderDetails) {
+  if (!orderDetails) {
     return (
       <div className="min-h-screen bg-[#fdfaf5] flex items-center justify-center">
         <div className="text-center">
@@ -65,50 +64,41 @@ const FinalCheckout = () => {
     }));
   };
 
-  // Handle payment submission
+  // Handle payment submission, now also does newsletter subscribe if opted in
   const handlePayment = async () => {
     setIsSubmitting(true);
-    setError(null);
-
+    setNewsletterError('');
     try {
-       const authData = getAuthData();
-        if (!authData) {
-          throw new Error('User not authenticated');
-        }
+      const authData = getAuthData();
+      if (!authData) {
+        throw new Error('User not authenticated');
+      }
 
-      // Extract just the product IDs from the items
+      // Subscribe to newsletter if opted in and email present
+      if (orderDetails.newsletterOptIn && orderDetails.shippingAddress?.email) {
+        setNewsletterSubmitting(true);
+        try {
+          await subscribeToNewsletter(orderDetails.shippingAddress.email);
+        } catch (err) {
+          setNewsletterError('Failed to subscribe to newsletter.'); // Allow order to proceed
+        }
+        setNewsletterSubmitting(false);
+      }
+
+      // Prepare order data for API
       const productIds = orderDetails.items.map(item => {
-        // Ensure we're sending the ID as a number
         const id = item.id || item.productId;
         return typeof id === 'string' ? parseInt(id, 10) : id;
-      }).filter(id => !isNaN(id)); // Filter out any invalid IDs
+      }).filter(id => !isNaN(id));
 
       if (productIds.length === 0) {
         throw new Error('No valid product IDs found in order');
       }
-      console.log(authData.user.id);
 
-      console.log("Product prices:", orderDetails.items.map(item => ({
-        id: item.id || item.productId,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.price * item.quantity
-      })));
-
-      console.log("Calculated subtotal:", orderDetails.items.reduce((sum, item) => 
-        sum + (item.price * item.quantity), 0));
-      
-      console.log("Shipping cost:", shippingCost);
-      console.log("Calculated total:", 
-        orderDetails.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost);
-
-      // Prepare order data for API
       const calculatedSubtotal = orderDetails.items.reduce((sum, item) => 
         sum + (parseFloat(item.price) * item.quantity), 0);
-      
       const calculatedTotal = calculatedSubtotal + parseFloat(shippingCost);
 
-      // Prepare order data with explicit decimal conversion
       const orderData = {
         products: productIds,
         total_price: parseFloat(calculatedTotal.toFixed(2)),
@@ -118,16 +108,6 @@ const FinalCheckout = () => {
         user: authData.user.id,
         subtotal: parseFloat(calculatedSubtotal.toFixed(2))
       };
-
-       console.log("Final API payload with parsed values:", {
-        ...orderData,
-        products: productIds,
-        calculated_values: {
-          subtotal: calculatedSubtotal,
-          shipping: shippingCost,
-          total: calculatedTotal
-        }
-      });
 
       const response = await fetch(`${BASE_URL}api/orders/`, {
         method: 'POST',
@@ -139,18 +119,16 @@ const FinalCheckout = () => {
       });
 
       const responseData = await response.json();
-      
+
       if (!response.ok) {
-        console.error('API Error Response:', responseData);
-        const errorMessage = responseData.detail || 
-                            responseData.message || 
-                            (responseData.errors ? JSON.stringify(responseData.errors) : 'Failed to place order');
+        const errorMessage = responseData.detail ||
+                             responseData.message ||
+                             (responseData.errors ? JSON.stringify(responseData.errors) : 'Failed to place order');
         throw new Error(errorMessage);
       }
 
       const orderId = responseData.id;
-      console.log('Order created successfully:', responseData);
-      
+
       navigate('/track-order', {
         state: {
           orderId,
@@ -162,7 +140,6 @@ const FinalCheckout = () => {
         }
       });
     } catch (err) {
-      console.error('Order submission error:', err);
       setError(err.message || 'Failed to process payment. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -199,7 +176,6 @@ const FinalCheckout = () => {
                 <h2 className="text-lg font-semibold">{item.name}</h2>
                 <p className="text-sm text-gray-700">x{item.quantity}</p>
                 <p className="text-md font-medium mt-1">{formatCurrency(item.price * item.quantity)}</p>
-                
                 {item.charms && (
                   <div className="mt-2">
                     <p className="text-sm font-medium mb-1">Charm Selection</p>
@@ -210,7 +186,7 @@ const FinalCheckout = () => {
                           src={charm.image || charm} 
                           alt={charm.name || `Charm ${i}`} 
                           className="w-6 h-6"
-                          onError={(e) => {
+                          onError={e => {
                             e.target.onerror = null;
                             e.target.src = "https://via.placeholder.com/24";
                           }}
@@ -219,7 +195,6 @@ const FinalCheckout = () => {
                     </div>
                   </div>
                 )}
-
                 {item.message && (
                   <div className="mt-3 text-sm italic text-gray-700">
                     <p>"{item.message}"</p>
@@ -260,6 +235,11 @@ const FinalCheckout = () => {
               {error}
             </div>
           )}
+          {newsletterError && (
+            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded mb-2">
+              {newsletterError}
+            </div>
+          )}
 
           <div className="space-y-4">
             <div>
@@ -296,7 +276,7 @@ const FinalCheckout = () => {
                   onChange={handleInputChange}
                   className="w-full mt-1 p-2 rounded-md border border-[#e3d5c5] bg-white"
                   required
-                  min={new Date().toISOString().slice(0, 7)} // Prevent past dates
+                  min={new Date().toISOString().slice(0, 7)}
                 />
               </div>
               <div className="flex-1">
@@ -312,7 +292,6 @@ const FinalCheckout = () => {
                 />
               </div>
             </div>
-
             <div>
               <h4 className="font-semibold text-md mt-4">Billing Address</h4>
               <div className="mt-2 space-y-2">
@@ -336,13 +315,12 @@ const FinalCheckout = () => {
                 </label>
               </div>
             </div>
-
             <button 
               onClick={handlePayment}
-              disabled={isSubmitting}
-              className={`w-full mt-6 bg-[#3a2e2a] text-white py-3 rounded-md hover:bg-[#2c221f] transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isSubmitting || newsletterSubmitting}
+              className={`w-full mt-6 bg-[#3a2e2a] text-white py-3 rounded-md hover:bg-[#2c221f] transition ${isSubmitting || newsletterSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isSubmitting ? 'Processing...' : 'Pay Now'}
+              {(isSubmitting || newsletterSubmitting) ? 'Processing...' : 'Pay Now'}
             </button>
           </div>
         </div>

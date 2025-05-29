@@ -64,7 +64,7 @@ export default function ProductGrid() {
 
   if (error) {
     return (
-      <div className="min-h-2 bg-[#fdf8f3] px-6 py-10 font-serif flex items-center justify-center">
+      <div className="min-h-min bg-[#fdf8f3] px-6 py-10 font-serif flex items-center justify-center">
         <p>Error: {error}</p>
       </div>
     );
@@ -73,14 +73,14 @@ export default function ProductGrid() {
   // If there are no giftSets with label: "forUs", show Coming Soon
   if (giftSets.length === 0) {
     return (
-      <div className="min-h-2 bg-[#fdf8f3] px-6 py-10 font-serif flex items-center justify-center">
+      <div className="min-h-min bg-[#fdf8f3] px-6 py-10 font-serif flex items-center justify-center">
         <p className="text-[#403c39] text-2xl font-bold">Coming Soon</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-2 bg-[#fdf8f3] px-6 py-10 font-serif relative">
+    <div className="min-h-min bg-[#fdf8f3] px-6 py-10 font-serif relative">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 border-b border-[#ede7de] pb-2">
         <div className="flex gap-2 text-[#403c39]">
@@ -149,7 +149,7 @@ export default function ProductGrid() {
                       ? "Rp " +
                         Number(giftSet.price)
                           .toLocaleString("id-ID", { maximumFractionDigits: 2 })
-                          .replace(/,/g, ".") + ",00"
+                          .replace(/,/g, ".")
                       : ""}
                   </p>
                 </div>

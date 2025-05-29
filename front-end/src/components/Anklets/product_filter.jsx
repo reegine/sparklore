@@ -39,7 +39,7 @@ export default function ProductGrid() {
     "Rp " +
     Number(value)
       .toLocaleString("id-ID", { maximumFractionDigits: 2 })
-      .replace(/,/g, ".") + ",00";
+      .replace(/,/g, ".");
 
   // Fetch products and discounts from API
   useEffect(() => {

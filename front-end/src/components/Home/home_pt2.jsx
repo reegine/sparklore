@@ -20,7 +20,7 @@ const HomePart2 = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarType, setSnackbarType] = useState('success');
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [countdown, setCountdown] = useState({ hours: "00", minutes: "00", seconds: "00" });
+  const [countdown, setCountdown] = useState({ days: "00", hours: "00", minutes: "00", seconds: "00" });
 
   // Calculate the countdown from now to end_time
   useEffect(() => {
@@ -32,16 +32,18 @@ const HomePart2 = () => {
       const now = Date.now();
       const distance = endTime - now;
       if (distance > 0) {
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance / (1000 * 60 * 60)) % 24);
         const minutes = Math.floor((distance / (1000 * 60)) % 60);
         const seconds = Math.floor((distance / 1000) % 60);
         setCountdown({
+          days: String(days).padStart(2, "0"),
           hours: String(hours).padStart(2, "0"),
           minutes: String(minutes).padStart(2, "0"),
           seconds: String(seconds).padStart(2, "0"),
         });
       } else {
-        setCountdown({ hours: "00", minutes: "00", seconds: "00" });
+        setCountdown({ days: "00", hours: "00", minutes: "00", seconds: "00" });
       }
     };
 
@@ -132,12 +134,14 @@ const HomePart2 = () => {
         <div className="block md:flex items-center justify-between">
           <div className="text-sm md:text-2xl font-medium mr-3 md:mr-10">ENDS IN</div>
           <div className="text-right">
-            <div className="flex justify-end space-x-3 md:space-x-6">
+            <div className="flex justify-end space-x-2 md:space-x-4">
+              <span className="text-2xl font-mono">{countdown.days}</span>
               <span className="text-2xl font-mono">{countdown.hours}</span>
               <span className="text-2xl font-mono">{countdown.minutes}</span>
               <span className="text-2xl font-mono">{countdown.seconds}</span>
             </div>
-            <div className="flex justify-end space-x-4 md:space-x-7 mt-1">
+            <div className="flex justify-end space-x-2 md:space-x-4 mt-1">
+              <span className="text-xs">Days</span>
               <span className="text-xs">Hrs</span>
               <span className="text-xs">Mins</span>
               <span className="text-xs">Secs</span>

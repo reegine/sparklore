@@ -240,7 +240,7 @@ const ProductDetailCharmBar = () => {
   const groupedCharms = groupCharmsByCategory();
 
   return (
-    <div className="bg-[#fdf9f0] py-[2rem]">
+    <div className="bg-[#fdf9f0] py-[2rem]" id="product-detail-charm-bar" tabIndex={-1}>
       {/* Login Prompt Popup */}
       {showLoginPrompt && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">

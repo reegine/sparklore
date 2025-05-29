@@ -4,7 +4,7 @@ import logo from "../../assets/logo/sparklore_logo.png";
 import { useState, useEffect } from "react";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
-import { isLoggedIn, logout, getAuthData, fetchCart, fetchProduct, fetchCharm, updateCartItemQuantity, deleteCartItem } from "../../utils/api.js";
+import { isLoggedIn, logout, getAuthData, fetchCart, fetchProduct, fetchCharm, updateCartItemQuantity, deleteCartItem, BASE_URL } from "../../utils/api.js";
 import Snackbar from '../snackbar.jsx';
 
 const NavBar = () => {
@@ -46,6 +46,37 @@ const NavBar = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  // New state for discount campaign map (productId as string => discountItem)
+  const [discountMap, setDiscountMap] = useState({});
+
+  // Fetch and build discount map on mount and whenever cart is opened
+  useEffect(() => {
+    const fetchDiscountCampaigns = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/api/discount-campaigns/`);
+        if (!response.ok) throw new Error("Failed to fetch discount campaigns");
+        const campaigns = await response.json();
+        const map = {};
+        // Flatten all campaign items into productId -> discountItem
+        campaigns.forEach(campaign => {
+          if (campaign.items && campaign.items.length > 0) {
+            campaign.items.forEach(item => {
+              if (item.product && item.product.id !== undefined && item.product.id !== null) {
+                map[`${item.product.id}`] = item;
+              }
+            });
+          }
+        });
+        setDiscountMap(map);
+      } catch (err) {
+        // No error thrown, cart can still work without discounts
+        setDiscountMap({});
+      }
+    };
+    // Always fetch new discount map if cart is opened
+    if (drawerCartOpen && isLoggedInState) fetchDiscountCampaigns();
+  }, [drawerCartOpen, isLoggedInState]);
+
   // Load cart data when drawer opens and user is logged in
   useEffect(() => {
     const loadCartData = async () => {
@@ -53,13 +84,13 @@ const NavBar = () => {
         try {
           setIsLoadingCart(true);
           setCartError(null);
-          
+
           // First keep the existing cart items as fallback
           const existingCartItems = [...cartItems];
-          
+
           try {
             const cartData = await fetchCart();
-            
+
             // Fetch product details for each item in cart
             const itemsWithDetails = await Promise.all(
               cartData.items.map(async (item) => {
@@ -67,21 +98,41 @@ const NavBar = () => {
                 const charmDetails = item.charms && item.charms.length > 0 
                   ? await Promise.all(item.charms.map(charmId => fetchCharm(charmId)))
                   : [];
-                
-                // Calculate prices with discount
+
+                // Apply discount logic (campaign > product discount)
                 const originalPrice = parseFloat(product.price);
-                const discount = parseFloat(product.discount || 0);
-                const discountedPrice = discount > 0 
-                  ? originalPrice * (1 - (discount / 100))
-                  : originalPrice;
+                let discount = parseFloat(product.discount || 0);
+                let discountedPrice = originalPrice;
+                let discountLabel = "";
+                let campaignDiscountItem = discountMap[`${product.id}`];
+
+                if (campaignDiscountItem) {
+                  const discountType = campaignDiscountItem.discount_type;
+                  const discountValue = parseFloat(campaignDiscountItem.discount_value || "0");
+                  if (discountType === "percent") {
+                    discountedPrice = originalPrice * (1 - discountValue / 100);
+                    discount = discountValue;
+                    discountLabel = `${discountValue}% OFF`;
+                  } else if (discountType === "amount") {
+                    discountedPrice = discountValue;
+                    discount = originalPrice > 0
+                      ? Math.round(((originalPrice - discountedPrice) / originalPrice) * 100)
+                      : 0;
+                    discountLabel = `${discount}% OFF`;
+                  }
+                } else if (discount > 0) {
+                  discountedPrice = originalPrice * (1 - (discount / 100));
+                  discountLabel = `${discount}% OFF`;
+                }
 
                 return {
                   id: item.id,
                   productId: item.product,
                   name: product.name,
-                  price: discountedPrice, // This is the discounted price
-                  originalPrice: discount > 0 ? originalPrice : null, // Only show if discounted
+                  price: discountedPrice, // Always the discounted price if any
+                  originalPrice: discountedPrice !== originalPrice ? originalPrice : null,
                   discount: discount,
+                  discountLabel,
                   quantity: item.quantity,
                   selected: false,
                   image: (product.images && product.images.length > 0) ? product.images[0].image_url : product1,
@@ -90,7 +141,7 @@ const NavBar = () => {
                 };
               })
             );
-            
+
             setCartItems(itemsWithDetails);
           } catch (error) {
             console.error("Error loading cart from API:", error);
@@ -105,10 +156,11 @@ const NavBar = () => {
           setIsLoadingCart(false);
         }
       }
+      // eslint-disable-next-line
     };
-
     loadCartData();
-  }, [drawerCartOpen, isLoggedInState]);
+    // eslint-disable-next-line
+  }, [drawerCartOpen, isLoggedInState, discountMap]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -133,17 +185,11 @@ const NavBar = () => {
     // Initial check
     const checkAuth = () => {
       const loggedIn = isLoggedIn();
-      if (loggedIn && !isLoggedInState) {
-        // Just logged in
-        // setSnackbarMessage('You are logged in');
-        // setSnackbarType('success');
-        // setShowSnackbar(true);
-      }
       setIsLoggedInState(loggedIn);
     };
 
     checkAuth();
-    
+
     // Listen for storage changes
     const handleStorageChange = (e) => {
       if (e.key === 'authData') {
@@ -152,7 +198,7 @@ const NavBar = () => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -188,118 +234,136 @@ const NavBar = () => {
   ];
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
-const handleQuantityChange = async (id, change) => {
-  const item = cartItems.find(item => item.id === id);
-  if (!item) return;
+  const handleQuantityChange = async (id, change) => {
+    const item = cartItems.find(item => item.id === id);
+    if (!item) return;
 
-  const newQuantity = item.quantity + change;
+    const newQuantity = item.quantity + change;
 
-  // Prevent negative quantities
-  if (newQuantity < 0) return;
+    // Prevent negative quantities
+    if (newQuantity < 0) return;
 
-  // Handle quantity 0 (delete item)
-  if (newQuantity === 0) {
-    setItemToDelete(id);
-    setShowDeleteConfirm(true);
-    return;
-  }
+    // Handle quantity 0 (delete item)
+    if (newQuantity === 0) {
+      setItemToDelete(id);
+      setShowDeleteConfirm(true);
+      return;
+    }
 
-  try {
-    // Optimistically update the UI
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
+    try {
+      // Optimistically update the UI
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.id === id
+            ? { ...item, quantity: newQuantity }
+            : item
+        )
+      );
 
-    // Update quantity on server
-    await updateCartItemQuantity(id, newQuantity);
+      // Update quantity on server
+      await updateCartItemQuantity(id, newQuantity);
 
-    // Refresh cart data to ensure sync
-    const updatedCart = await fetchCart();
-    const itemsWithDetails = await Promise.all(
-      updatedCart.items.map(async (item) => {
-        const product = await fetchProduct(item.product);
-        const charmDetails = item.charms && item.charms.length > 0 
-          ? await Promise.all(item.charms.map(charmId => fetchCharm(charmId)))
-          : [];
-        
-        // Calculate prices with discount
-        const originalPrice = parseFloat(product.price);
-        const discount = parseFloat(product.discount || 0);
-        const discountedPrice = discount > 0 
-          ? originalPrice * (1 - (discount / 100))
-          : originalPrice;
+      // Refresh cart data to ensure sync (re-apply discount logic here!)
+      const updatedCart = await fetchCart();
+      const itemsWithDetails = await Promise.all(
+        updatedCart.items.map(async (item) => {
+          const product = await fetchProduct(item.product);
+          const charmDetails = item.charms && item.charms.length > 0 
+            ? await Promise.all(item.charms.map(charmId => fetchCharm(charmId)))
+            : [];
+          // Apply discount campaign logic
+          const originalPrice = parseFloat(product.price);
+          let discount = parseFloat(product.discount || 0);
+          let discountedPrice = originalPrice;
+          let discountLabel = "";
+          let campaignDiscountItem = discountMap[`${product.id}`];
 
-        return {
-          id: item.id,
-          productId: item.product,
-          name: product.name,
-          price: discountedPrice, // This is the discounted price
-          originalPrice: discount > 0 ? originalPrice : null, // Only show if discounted
-          discount: discount,
-          quantity: item.quantity,
-          selected: item.selected || false,
-          image: (product.images && product.images.length > 0) ? product.images[0].image_url : product1,
-          charms: charmDetails.map(charm => charm.image),
-          message: item.message || ""
-        };
-      })
-    );
-    setCartItems(itemsWithDetails);
+          if (campaignDiscountItem) {
+            const discountType = campaignDiscountItem.discount_type;
+            const discountValue = parseFloat(campaignDiscountItem.discount_value || "0");
+            if (discountType === "percent") {
+              discountedPrice = originalPrice * (1 - discountValue / 100);
+              discount = discountValue;
+              discountLabel = `${discountValue}% OFF`;
+            } else if (discountType === "amount") {
+              discountedPrice = discountValue;
+              discount = originalPrice > 0
+                ? Math.round(((originalPrice - discountedPrice) / originalPrice) * 100)
+                : 0;
+              discountLabel = `${discount}% OFF`;
+            }
+          } else if (discount > 0) {
+            discountedPrice = originalPrice * (1 - (discount / 100));
+            discountLabel = `${discount}% OFF`;
+          }
 
-  } catch (error) {
-    console.error("Error updating quantity:", error);
-    // Revert UI if update fails
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id
-          ? { ...item, quantity: item.quantity - change }
-          : item
-      )
-    );
-    setSnackbarMessage('Failed to update quantity');
-    setSnackbarType('error');
-    setShowSnackbar(true);
-  }
-};
+          return {
+            id: item.id,
+            productId: item.product,
+            name: product.name,
+            price: discountedPrice, // This is the discounted price
+            originalPrice: discountedPrice !== originalPrice ? originalPrice : null,
+            discount: discount,
+            discountLabel,
+            quantity: item.quantity,
+            selected: item.selected || false,
+            image: (product.images && product.images.length > 0) ? product.images[0].image_url : product1,
+            charms: charmDetails.map(charm => charm.image),
+            message: item.message || ""
+          };
+        })
+      );
+      setCartItems(itemsWithDetails);
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      // Revert UI if update fails
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.id === id
+            ? { ...item, quantity: item.quantity - change }
+            : item
+        )
+      );
+      setSnackbarMessage('Failed to update quantity');
+      setSnackbarType('error');
+      setShowSnackbar(true);
+    }
+  };
 
-const handleConfirmDelete = async () => {
-  if (!itemToDelete) return;
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
 
-  try {
-    // Delete from server
-    await deleteCartItem(itemToDelete);
-    
-    // Update UI
-    setCartItems(prevItems => prevItems.filter(item => item.id !== itemToDelete));
-    
-    setSnackbarMessage('Item removed from cart');
-    setSnackbarType('success');
-    setShowSnackbar(true);
-  } catch (error) {
-    console.error("Error deleting item:", error);
-    setSnackbarMessage('Failed to remove item');
-    setSnackbarType('error');
-    setShowSnackbar(true);
-  } finally {
-    setShowDeleteConfirm(false);
-    setItemToDelete(null);
-  }
-};
+    try {
+      // Delete from server
+      await deleteCartItem(itemToDelete);
+
+      // Update UI
+      setCartItems(prevItems => prevItems.filter(item => item.id !== itemToDelete));
+
+      setSnackbarMessage('Item removed from cart');
+      setSnackbarType('success');
+      setShowSnackbar(true);
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      setSnackbarMessage('Failed to remove item');
+      setSnackbarType('error');
+      setShowSnackbar(true);
+    } finally {
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+    }
+  };
 
   const toggleItemSelection = (id) => {
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === id
           ? {
-              ...item,
-              selected: !item.selected
-            }
+            ...item,
+            selected: !item.selected
+          }
           : item
       )
     );
@@ -328,8 +392,6 @@ const handleConfirmDelete = async () => {
       minimumFractionDigits: 0
     }).format(price).replace('IDR', 'Rp.');
   };
-
-
 
 
   return (
@@ -452,8 +514,15 @@ const handleConfirmDelete = async () => {
 
       {/* Shopping Cart Drawer - Updated Section */}
       {drawerCartOpen && (
-        <div className="fixed inset-0 z-50 bg-black/30 flex justify-end">
-          <div className="bg-[#fdfaf3] sm:w-full md:w-[40%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/30 flex justify-end"
+          // New: close drawer if user clicks the backdrop, but NOT if they click inside the drawer
+          onClick={() => setDrawerCartOpen(false)}
+        >
+          <div
+            className="bg-[#fdfaf3] sm:w-full md:w-[40%] h-full p-6 overflow-y-auto relative animate-slideInRight shadow-2xl"
+            onClick={e => e.stopPropagation()} // Prevent closing when clicking inside the drawer
+          >
             {/* Header */}
             <div className="flex justify-between items-center border-b pb-4 mb-4">
               <h2 className="text-xl font-semibold tracking-widest text-gray-800">YOUR CART</h2>
@@ -497,13 +566,10 @@ const handleConfirmDelete = async () => {
                     <div className="flex-1">
                       <div className="flex justify-between">
                         <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                        {/* <button className="text-sm text-gray-600">Edit</button> */}
                       </div>
-
-                       <div className="flex flex-col">
-                        {/* Display discounted price and original price if discounted */}
+                      <div className="flex flex-col">
                         <p className="text-[#b87777] font-semibold">
-                          {formatPrice(item.price * item.quantity)} {/* Total price for quantity */}
+                          {formatPrice(item.price * item.quantity)}
                         </p>
                         {item.originalPrice && (
                           <div className="flex gap-2">
@@ -511,7 +577,7 @@ const handleConfirmDelete = async () => {
                               {formatPrice(item.originalPrice * item.quantity)}
                             </p>
                             <span className="text-xs bg-[#c3a46f] text-white px-1 rounded">
-                              {item.discount}% OFF
+                              {item.discountLabel || `${item.discount}% OFF`}
                             </span>
                           </div>
                         )}
@@ -532,14 +598,12 @@ const handleConfirmDelete = async () => {
                           </div>
                         </div>
                       )}
-                      
                       {item.message && (
                         <div className="text-sm mt-2">
                           <p className="font-medium text-start text-gray-600">Special Message</p>
                           <p className="italic text-sm text-gray-600">"{item.message}"</p>
                         </div>
                       )}
-                      
                       <div className="flex items-center gap-2 mt-2">
                         <button 
                           className="border px-2 rounded text-gray-700"
@@ -602,9 +666,9 @@ const handleConfirmDelete = async () => {
                   >
                     Checkout
                   </Link>
-                  <button className="w-full bg-[#e4572e] text-white font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition">
+                  {/* <button className="w-full bg-[#e4572e] text-white font-medium py-3 rounded-lg text-lg tracking-wide hover:opacity-90 transition">
                     Shopee Checkout
-                  </button>
+                  </button> */}
                 </div>
               </>
             )}

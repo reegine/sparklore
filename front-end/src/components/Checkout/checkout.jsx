@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import { fetchProduct, fetchCharm } from '../../utils/api';
+import { fetchProduct, fetchCharm, BASE_URL } from '../../utils/api';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // State for cart items
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,50 +18,76 @@ const CheckoutPage = () => {
     postalCode: ''
   });
 
-    // Handle shipping address input changes
+  // Newsletter logic
+  const [showNewsletterCheckbox, setShowNewsletterCheckbox] = useState(false);
+  const [newsletterChecked, setNewsletterChecked] = useState(false);
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterError, setNewsletterError] = useState("");
+  const [formError, setFormError] = useState(null); // For validation
+  const [formTouched, setFormTouched] = useState(false);
+
+  // Check newsletter subscription when email changes
+  useEffect(() => {
+    const fetchNewsletterStatus = async () => {
+      setShowNewsletterCheckbox(false);
+      setNewsletterError("");
+      setNewsletterChecked(false);
+
+      // Only check if email is valid and not empty
+      if (!shippingAddress.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingAddress.email)) {
+        setShowNewsletterCheckbox(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${BASE_URL}/api/newsletters/`);
+        if (!res.ok) throw new Error("Failed to check newsletter subscriptions");
+        const data = await res.json();
+        const userSubscribed = data.some(item =>
+          (item.user_email || item.email) &&
+          (item.user_email || item.email).toLowerCase() === shippingAddress.email.toLowerCase()
+        );
+        setShowNewsletterCheckbox(!userSubscribed);
+      } catch (err) {
+        setNewsletterError("Failed to check newsletter subscription");
+        setShowNewsletterCheckbox(false);
+      }
+    };
+    fetchNewsletterStatus();
+  }, [shippingAddress.email]);
+
+  // Handle shipping address input changes
   const handleAddressChange = (e) => {
     const { name, value } = e.target;
     setShippingAddress(prev => ({
       ...prev,
       [name]: value
     }));
+    setFormTouched(true);
   };
-
 
   // Fetch item details when component mounts
   useEffect(() => {
     const fetchItemDetails = async () => {
       const selectedItems = location.state?.selectedItems || [];
-      console.log("Selected items from navigation:", selectedItems); // Log the selected items
-
       try {
-        // If we have selected items from navigation, use them
         if (selectedItems.length > 0) {
-          // Enhance items with full product and charm details
           const enhancedItems = await Promise.all(
             selectedItems.map(async (item) => {
               try {
-                // Fetch product details
                 const product = await fetchProduct(item.productId || item.id);
-                
-                // Fetch charm details if charms exist
                 let charmDetails = [];
                 if (item.charms && item.charms.length > 0) {
-                  // Check if charms are already objects with IDs or just image URLs
                   if (typeof item.charms[0] === 'object') {
-                    charmDetails = item.charms; // Already have charm objects
+                    charmDetails = item.charms;
                   } else {
-                    // Need to fetch charm details (this assumes charms are image URLs in the cart)
-                    // You might need to adjust this based on your actual data structure
                     charmDetails = item.charms.map(image => ({ image }));
                   }
                 }
-
                 return {
                   ...item,
                   id: item.id,
                   name: product.name,
-                  image: product.image || item.image,
+                  image: (product.images && product.images.length > 0) ? product.images[0].image_url : item.image,
                   price: item.price,
                   originalPrice: item.originalPrice,
                   discount: item.discount,
@@ -70,17 +96,14 @@ const CheckoutPage = () => {
                   message: item.message || ""
                 };
               } catch (error) {
-                console.error("Error enhancing item:", error);
-                return item; // Return the original item if enhancement fails
+                return item;
               }
             })
           );
-          
           setCartItems(enhancedItems);
-          console.log("Enhanced cart items:", enhancedItems); // Log the enhanced items
         }
       } catch (error) {
-        console.error("Error fetching item details:", error);
+        //
       } finally {
         setIsLoading(false);
       }
@@ -96,11 +119,8 @@ const CheckoutPage = () => {
   ];
 
   const paymentMethods = [
-    { name: "VISA", icon: "💳" },
-    { name: "Mastercard", icon: "💳" },
-    { name: "BCA", icon: "🏦" },
-    { name: "Mandiri", icon: "🏦" },
-    { name: "Gopay", icon: "📱" }
+    { name: "Virtual Account (BCA)", icon: "🏦" },
+    { name: "QRIS", icon: "📱" }
   ];
 
   const [selectedShipping, setSelectedShipping] = useState(null);
@@ -124,13 +144,36 @@ const CheckoutPage = () => {
     return `Rp. ${amount.toLocaleString('id-ID')},00`;
   };
 
-  const handlePlaceOrder = () => {
+  // Validation function for all required fields
+  const isFormValid = () => {
+    // All shippingAddress fields except the newsletter checkbox must be filled and not just whitespace
+    for (const key in shippingAddress) {
+      if (
+        typeof shippingAddress[key] === "string" &&
+        shippingAddress[key].trim() === ""
+      ) {
+        return false;
+      }
+    }
+    // Email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingAddress.email)) {
+      return false;
+    }
+    // Shipping & payment selected
     if (!selectedShipping || !selectedPayment) {
-      alert('Please select shipping and payment options');
+      return false;
+    }
+    return true;
+  };
+
+  const handlePlaceOrder = () => {
+    setFormTouched(true);
+    if (!isFormValid()) {
+      setFormError("Please fill in all fields and select shipping and payment options with a valid email.");
       return;
     }
+    setFormError(null);
 
-    // Prepare order data to pass to final checkout
     const orderData = {
       items: cartItems,
       shipping: selectedShipping,
@@ -139,17 +182,32 @@ const CheckoutPage = () => {
       discount: discount,
       shippingCost: shippingCost,
       total: total,
-      shippingAddress: shippingAddress // Add shipping address to order data
+      shippingAddress: shippingAddress,
+      newsletterOptIn: showNewsletterCheckbox && newsletterChecked
     };
 
-    console.log("Data being passed to final_checkout:", orderData); // Log the data
-
-    navigate('/checkout/payment', {
-      state: {
-        orderDetails: orderData
-      }
-    });
+    // Route to payment page based on payment option
+    if (selectedPayment.name === "Virtual Account (BCA)") {
+      navigate('/checkout/virtual-account', { state: { orderDetails: orderData } });
+    } else if (selectedPayment.name === "QRIS") {
+      navigate('/checkout/qris', { state: { orderDetails: orderData } });
+    } else {
+      // Fallback to card payment/final checkout
+      navigate('/checkout/payment', { state: { orderDetails: orderData } });
+    }
   };
+
+  useEffect(() => {
+    if (formTouched) {
+      // live update error message for form fields
+      if (!isFormValid()) {
+        setFormError("Please fill in all fields and select shipping and payment options with a valid email.");
+      } else {
+        setFormError(null);
+      }
+    }
+    // eslint-disable-next-line
+  }, [shippingAddress, selectedShipping, selectedPayment]);
 
   if (isLoading) {
     return (
@@ -191,7 +249,6 @@ const CheckoutPage = () => {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-medium">Contact Information</h3>
-                  <a href="#" className="text-sm underline">Have an account?</a>
                 </div>
                 <input
                   type="text"
@@ -211,10 +268,24 @@ const CheckoutPage = () => {
                   className="w-full border border-[#f2e9d5] rounded-md px-4 py-2 mb-3 bg-[#fdfaf3]"
                   required
                 />
-                <label className="flex items-center text-sm">
-                  <input type="checkbox" className="mr-2" />
-                  Mail me about exclusive offer.
-                </label>
+                {showNewsletterCheckbox && (
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      className="mr-2"
+                      checked={newsletterChecked}
+                      onChange={e => setNewsletterChecked(e.target.checked)}
+                      disabled={newsletterLoading}
+                    />
+                    <span className='ms-[0.5rem]'>Mail me about exclusive offer.</span>
+                    {newsletterLoading && (
+                      <span className="ml-2 text-xs text-gray-500">Processing...</span>
+                    )}
+                  </label>
+                )}
+                {newsletterError && (
+                  <div className="text-xs text-red-500 mt-1">{newsletterError}</div>
+                )}
               </div>
 
               <div>
@@ -265,6 +336,7 @@ const CheckoutPage = () => {
                 <button
                   className="w-full border border-[#f2e9d5] rounded-md px-4 py-2 bg-[#e9d6a9] text-left flex justify-between items-center"
                   onClick={() => setShowShippingDropdown(!showShippingDropdown)}
+                  type="button"
                 >
                   {selectedShipping ? (
                     <div className="flex justify-between w-full">
@@ -314,6 +386,7 @@ const CheckoutPage = () => {
                 <button
                   className="w-full border border-[#f2e9d5] rounded-md px-4 py-2 bg-[#e9d6a9] text-left flex justify-between items-center"
                   onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
+                  type="button"
                 >
                   {selectedPayment ? (
                     <div className="flex items-center gap-2">
@@ -351,6 +424,9 @@ const CheckoutPage = () => {
                   </div>
                 )}
               </div>
+              {formError && (
+                <div className="text-xs text-red-500 mt-1">{formError}</div>
+              )}
             </div>
 
             {/* Right Column - Order Summary */}
@@ -365,7 +441,7 @@ const CheckoutPage = () => {
                     className="w-24 h-24 object-cover rounded-md"
                     onError={(e) => {
                       e.target.onerror = null; 
-                      e.target.src = "https://via.placeholder.com/100"; // Fallback image
+                      e.target.src = "https://via.placeholder.com/100";
                     }}
                   />
                   <div className="flex-1">
@@ -404,7 +480,7 @@ const CheckoutPage = () => {
                                 className="w-10 h-10 object-contain border border-[#f2e9d5] rounded-sm p-1"
                                 onError={(e) => {
                                   e.target.onerror = null; 
-                                  e.target.src = "https://via.placeholder.com/40"; // Fallback image
+                                  e.target.src = "https://via.placeholder.com/40";
                                 }}
                               />
                             </div>
@@ -451,7 +527,7 @@ const CheckoutPage = () => {
           <button 
             className="w-full bg-[#e9d6a9] text-lg font-medium py-3 mt-6 rounded-md hover:bg-[#e3c990] transition-colors disabled:opacity-50"
             onClick={handlePlaceOrder}
-            disabled={!selectedShipping || !selectedPayment}
+            disabled={newsletterLoading || !isFormValid()}
           >
             Place My Order
           </button>

@@ -30,6 +30,9 @@ import FaqRefundPage from './pages/faq.jsx'
 import FaqPage from './pages/faq.jsx'
 import RefundPage from './pages/refund.jsx'
 import DetailPageSets from './pages/detail_page_sets.jsx'
+import MonthlySpecials from './pages/monthly_specials.jsx'
+import FinalCheckoutQRISPage from './pages/final_checkout_qris.jsx'
+import FinalCheckoutVAPage from './pages/final_checkout _va.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -48,6 +51,8 @@ const router = createBrowserRouter([
   {path:"/verify", element: <OTPCode />},
   {path:"/checkout", element: <Checkout />},
   {path:"/checkout/payment", element: <FinalCheckoutPage />},
+  {path:"/checkout/virtual-account", element: <FinalCheckoutVAPage/>},
+  {path:"/checkout/qris", element: <FinalCheckoutQRISPage/>},
   {path:"/track-order", element: <TrackingOrder />},
   {path:"/new-arrival", element: <NewArrival />},
   {path:"/jewel-set", element: <JewelSet />},
@@ -57,7 +62,9 @@ const router = createBrowserRouter([
   {path:"/for-her", element: <ForHer />},
   {path:"/faq", element: <FaqPage />},
   {path:"/refund", element: <RefundPage />},
+  {path:"/monthly-specials", element: <MonthlySpecials />},
   {path:"*", element: <NotFound/>},
+  
 ]);
 
 createRoot(document.getElementById('root')).render(

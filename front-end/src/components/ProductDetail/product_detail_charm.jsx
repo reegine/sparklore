@@ -9,7 +9,7 @@ import baseNecklace from "../../assets/default/basenecklace.png";
 
 // Function to format numbers as Indonesian Rupiah
 const formatIDR = (amount) => {
-  return "Rp " + Number(amount).toLocaleString("id-ID", { maximumFractionDigits: 2 }).replace(/,/g, ".") + ",00";
+  return "Rp " + Number(amount).toLocaleString("id-ID", { maximumFractionDigits: 2 }).replace(/,/g, ".");
 };
 
 const ProductDetailCharm = () => {

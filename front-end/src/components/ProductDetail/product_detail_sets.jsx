@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
-import clsx from "clsx";
 import { BASE_URL, isLoggedIn } from "../../utils/api.js";
 
+// Helper: format IDR currency
 const formatIDR = (amount) => {
-  return "Rp " + Number(amount).toLocaleString("id-ID", { maximumFractionDigits: 2 }).replace(/,/g, ".") + ",00";
+  return "Rp " + Number(amount).toLocaleString("id-ID", { maximumFractionDigits: 2 }).replace(/,/g, ".");
 };
+
+const ArrowIcon = ({ direction = "left" }) => (
+  <svg
+    width="2em"
+    height="2em"
+    viewBox="0 0 24 24"
+    fill="none"
+    className="inline"
+    style={{ display: 'block' }}
+  >
+    {direction === "left" ? (
+      <path d="M15 18l-6-6 6-6" stroke="#b87777" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+    ) : (
+      <path d="M9 6l6 6-6 6" stroke="#b87777" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+    )}
+  </svg>
+);
 
 const ProductDetailSets = () => {
   const { productId } = useParams();
@@ -14,8 +30,10 @@ const ProductDetailSets = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mainImage, setMainImage] = useState('');
+  const [mainIdx, setMainIdx] = useState(0);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isLoggedInState, setIsLoggedInState] = useState(false);
+  const [showArrows, setShowArrows] = useState(false);
 
   useEffect(() => {
     setIsLoggedInState(isLoggedIn());
@@ -35,7 +53,14 @@ const ProductDetailSets = () => {
         if (!response.ok) throw new Error('Failed to fetch gift set');
         const data = await response.json();
         setGiftSet(data);
-        setMainImage(data.image_url || data.image || "");
+        // If you have an array of images, use that. Otherwise, fallback to a single image.
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          setMainImage(data.images[0].image_url || data.images[0].image || "");
+          setMainIdx(0);
+        } else {
+          setMainImage(data.image_url || data.image || "");
+          setMainIdx(0);
+        }
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -57,6 +82,39 @@ const ProductDetailSets = () => {
   };
 
   const handleCloseLoginPrompt = () => setShowLoginPrompt(false);
+
+  // Thumbnails array: support multiple images (array) or fallback to single image
+  let thumbnails = [];
+  if (giftSet) {
+    if (Array.isArray(giftSet.images) && giftSet.images.length > 0) {
+      thumbnails = giftSet.images.map(img => img.image_url || img.image);
+    } else if (giftSet.image_url || giftSet.image) {
+      thumbnails = [giftSet.image_url || giftSet.image];
+    }
+  }
+  const totalImages = thumbnails.length;
+
+  // If the mainImage is changed via thumbnail, update idx
+  useEffect(() => {
+    if (mainImage && thumbnails.length > 0) {
+      const idx = thumbnails.indexOf(mainImage);
+      if (idx !== -1) setMainIdx(idx);
+    }
+    // eslint-disable-next-line
+  }, [mainImage]);
+
+  const handlePrev = () => {
+    if (totalImages === 0) return;
+    const prevIdx = (mainIdx - 1 + totalImages) % totalImages;
+    setMainIdx(prevIdx);
+    setMainImage(thumbnails[prevIdx]);
+  };
+  const handleNext = () => {
+    if (totalImages === 0) return;
+    const nextIdx = (mainIdx + 1) % totalImages;
+    setMainIdx(nextIdx);
+    setMainImage(thumbnails[nextIdx]);
+  };
 
   if (loading) {
     return (
@@ -81,9 +139,6 @@ const ProductDetailSets = () => {
       </div>
     );
   }
-
-  // Create thumbnails array (single image for now)
-  const thumbnails = [giftSet.image_url || giftSet.image];
 
   return (
     <div className='bg-[#faf7f0] relative'>
@@ -130,19 +185,46 @@ const ProductDetailSets = () => {
                 key={idx}
                 src={src}
                 alt={`Thumbnail ${idx + 1}`}
-                onClick={() => setMainImage(src)}
-                className="flex-shrink-0 w-16 h-16 object-cover rounded cursor-pointer border border-gray-200 hover:border-gray-400 transition"
+                onClick={() => {
+                  setMainImage(src);
+                  setMainIdx(idx);
+                }}
+                className={`flex-shrink-0 w-16 h-16 object-cover rounded cursor-pointer border ${idx === mainIdx ? 'border-[#b87777] ring-2 ring-[#b87777]' : 'border-gray-200 hover:border-gray-400'} transition`}
               />
             ))}
           </div>
 
-          {/* Main Gift Set Image */}
-          <div className="flex-1 order-1 md:order-2">
+          {/* Main Gift Set Image with arrows on hover */}
+          <div
+            className="flex-1 order-1 md:order-2 relative flex items-center justify-center group"
+            onMouseEnter={() => setShowArrows(true)}
+            onMouseLeave={() => setShowArrows(false)}
+          >
+            {totalImages > 1 && showArrows && (
+              <button
+                aria-label="Previous image"
+                onClick={handlePrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                style={{outline: 0}}
+              >
+                <ArrowIcon direction="left" />
+              </button>
+            )}
             <img
               src={mainImage}
               alt={giftSet.name}
-              className="w-full max-w-lg rounded-lg shadow-md"
+              className="w-full max-w-lg rounded-lg shadow-md object-contain"
             />
+            {totalImages > 1 && showArrows && (
+              <button
+                aria-label="Next image"
+                onClick={handleNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 shadow-md rounded-full p-2 z-20 border border-[#e9d6a9] transition"
+                style={{outline: 0}}
+              >
+                <ArrowIcon direction="right" />
+              </button>
+            )}
           </div>
 
           {/* Gift Set Info */}

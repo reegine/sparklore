@@ -18,8 +18,8 @@ const HomePart1 = () => {
     {
       id: 2,
       image: product2,
-      alt: "Valentine Special",
-      title: "VALENTINE SPECIAL",
+      alt: "Monthly Special",
+      title: "MONTHLY SPECIAL",
       hoverText: "Explore"
     },
     {

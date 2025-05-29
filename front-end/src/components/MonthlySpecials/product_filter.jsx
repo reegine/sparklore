@@ -24,7 +24,7 @@ export default function ProductGrid() {
 
         // Only keep those with "label": "forHim" (case-insensitive)
         const filtered = data
-          .filter((item) => item.label && item.label.toLowerCase() === "forhim")
+          .filter((item) => item.label && item.label.toLowerCase() === "bundle")
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         setGiftSets(filtered);
