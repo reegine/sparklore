@@ -230,25 +230,145 @@ const ProductDetail = (props) => {
 
   return (
     <div className='bg-[#faf7f0] relative'>
-      {/* ...Popups... (unchanged) */}
+      {/* Login Prompt Popup */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-fadeIn">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Login Required</h3>
+              <p className="text-gray-600 mb-6">
+                You need to be logged in to add items to your cart.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleCloseLoginPrompt}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-[#e6d4a5] text-gray-800 rounded-md hover:bg-[#d4c191] transition"
+                  onClick={handleCloseLoginPrompt}
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup Overlay */}
+      {showPopup && (
+        <>
+          {showCharms && (
+          <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
+            <div className="bg-[#fdfaf3] p-6 rounded-2xl border-2 border-black text-center max-w-xl w-full">
+              <h2 className="text-2xl font-semibold text-[#3b322c]">SURPRISE!</h2>
+              <p className="mt-2 text-[#3b322c]">You've unlock limited edition charms, do you want to add them for only Rp. 89.999/charm</p>
+
+              {product.charms_detail && product.charms_detail.length > 0 ? (
+                <div className="grid grid-cols-4 gap-4 my-6">
+                  {product.charms_detail.map((charm, index) => (
+                    <div key={index} className="flex flex-col items-center">
+                      <img src={charm.image} alt={charm.name} className="h-12" />
+                      <span className="text-[#3b322c] mt-1">{charm.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="my-6 text-[#3b322c]">
+                  No charms available for this product
+                </div>
+              )}
+
+              <div className="flex gap-4 justify-center">
+                <button onClick={handleAddOrSkipCharms} className="bg-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Add</button>
+                <button onClick={handleAddOrSkipCharms} className="border border-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Maybe Next Time</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+          {showNote && (
+            <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.8)] z-50">
+              <div className="bg-[#fdfaf3] p-6 rounded-2xl border-2 border-black text-center max-w-lg w-full">
+                <h2 className="text-2xl font-semibold text-[#3b322c]">Make It Extra Special</h2>
+                <p className="mt-2 text-[#3b322c]">Write a special notes for someone you love!</p>
+
+                <textarea
+                  maxLength={65}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Write it and we'll deliver!"
+                  className="w-full mt-4 p-4 border border-[#e9d6a9] rounded-md bg-transparent text-[#3b322c] placeholder-[#3b322c] h-40 resize-none"
+                ></textarea>
+                <div className="text-right text-sm text-[#3b322c]">{note.length}/65</div>
+
+                <div className="flex gap-4 justify-center mt-4">
+                  <button onClick={handleNoteSubmit} className="bg-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Add</button>
+                  <button onClick={handleNoteSubmit} className="border border-[#e9d6a9] text-[#3b322c] font-medium py-2 px-6 rounded-md">Maybe Next Time</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      
       <div className="max-w-7xl mx-auto px-6 md:px-16 py-10 font-serif text-[#2d2a26]">
         <div className="text-sm text-gray-400 mb-4">
           Home &gt; <span className="text-gray-500">{product.category}</span> &gt; <span className="text-black font-medium">{product.name}</span>
         </div>
 
         <div className="flex flex-col md:flex-row gap-10">
-          {/* Thumbnail Images */}
+          {/* Thumbnail Images For Desktop (md and up) */}
           {thumbnails.length > 0 && (
             <div
-              className={`flex md:flex-col gap-4 pb-2 order-2 md:order-1 ${
-                isThumbnailScrollable
-                  ? 'md:max-h-[5rem] md:overflow-y-auto scrollbar-thin scrollbar-thumb-[#e6d4a5] scrollbar-track-[#faf7f0]'
-                  : 'md:overflow-visible'
-              }`}
+              className={`
+                hidden md:flex md:flex-col gap-4 pb-2 order-2 md:order-1
+                ${isThumbnailScrollable
+                  ? 'md:max-h-[440px] md:overflow-y-auto scrollbar-thin scrollbar-thumb-[#e6d4a5] scrollbar-track-[#faf7f0]'
+                  : 'md:overflow-visible'}
+              `}
               ref={thumbnailContainerRef}
               style={
                 isThumbnailScrollable
                   ? { maxHeight: '440px', minHeight: '110px' }
+                  : {}
+              }
+            >
+              {thumbnails.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt={product.images[idx]?.alt_text || `Thumbnail ${idx + 1}`}
+                  onClick={() => {
+                    setMainImage(src);
+                    setMainIdx(idx);
+                  }}
+                  className={`flex-shrink-0 w-16 h-16 object-cover rounded cursor-pointer border ${idx === mainIdx ? 'border-[#b87777] ring-2 ring-[#b87777]' : 'border-gray-200 hover:border-gray-400'} transition`}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/path/to/default/image.png';
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Thumbnail Images For Mobile (sm only) */}
+          {thumbnails.length > 0 && (
+            <div
+              className={`
+                flex md:hidden gap-4 pb-2 order-2
+                ${isThumbnailScrollable ? 'overflow-x-auto max-w-full scrollbar-thin scrollbar-thumb-[#e6d4a5] scrollbar-track-[#faf7f0]' : ''}
+              `}
+              ref={thumbnailContainerRef}
+              style={
+                isThumbnailScrollable
+                  ? { maxWidth: '100%', minHeight: '64px' }
                   : {}
               }
             >

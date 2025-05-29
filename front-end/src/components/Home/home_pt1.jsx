@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import product1 from "../../assets/default/homeproduct1.png";
 import product2 from "../../assets/default/homeproduct2.png";
 import product3 from "../../assets/default/homeproduct3.png";
+import { Link } from "react-router-dom";
 
 const HomePart1 = () => {
   const navigate = useNavigate();
@@ -51,9 +52,11 @@ const HomePart1 = () => {
   return (
     <div className="bg-[#F9F5EE] p-10">
       <div className="relative text-center mb-[1rem] md:mb-[3rem]">
-        <div className="absolute -top-20 md:-top-28 left-1/5 md:left-1/5 -translate-x-1/2 bg-[#E6D3A3] px-5 py-3 md:px-10 md:py-6 rounded-lg text-sm md:text-4xl font-semibold border-10 border-[#F9F5EE]">
-          Customize Now
-        </div>
+
+         <Link to="/charmbar" className="absolute -top-20 md:-top-28 left-1/5 md:left-1/5 -translate-x-1/2 bg-[#E6D3A3] px-5 py-3 md:px-10 md:py-6 rounded-lg text-sm md:text-4xl font-semibold border-10 border-[#F9F5EE]">
+              Customize Now
+          </Link>
+
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-15 px-[0rem] md:px-[10rem]">

@@ -36,7 +36,7 @@ const GiftSetPart1 = () => {
     <div className="bg-[#F9F5EE] p-10 pb-[7rem]">
       <div className="relative text-center mb-[1rem] md:mb-[3rem]">
         <div className="absolute -top-20 md:-top-28 left-1/5 md:left-1/5 -translate-x-1/2 bg-[#E6D3A3] px-5 py-3 md:px-10 md:py-6 rounded-lg text-sm md:text-4xl font-semibold border-10 border-[#F9F5EE]">
-          Customize Now
+          Customize My Gift
         </div>
       </div>
 

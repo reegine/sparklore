@@ -7,51 +7,8 @@ import {
   LayoutGrid,
   Rows2,
 } from "lucide-react";
-import { cn, BASE_URL } from "../../utils/utils.js";
-
-// Helper: format IDR currency
-const formatIDR = (value) =>
-  "Rp " +
-  Number(value)
-    .toLocaleString("id-ID", { maximumFractionDigits: 2 })
-    .replace(/,/g, ".");
-
-// Helper: get first product image, fallback if not available
-const getFirstProductImage = (product) => {
-  if (product.images && product.images.length > 0) {
-    return product.images[0].image_url;
-  }
-  return product.image || '../../assets/default/banner_home.jpeg';
-};
-
-// Discount price calculation logic per product
-const getDiscounted = (product, discountMapArg) => {
-  const discountItem = (discountMapArg || {})[`${product.id}`];
-  let displayPrice = product.price;
-  let oldPrice = null;
-  let discountLabel = "";
-  if (discountItem) {
-    const discountType = discountItem.discount_type;
-    const discountValue = parseFloat(discountItem.discount_value || "0");
-    if (discountType === "percent") {
-      displayPrice = product.price * (1 - discountValue / 100);
-      oldPrice = product.price;
-      discountLabel = `${discountValue}% OFF`;
-    } else if (discountType === "amount") {
-      displayPrice = discountValue;
-      oldPrice = product.price;
-      const percent = oldPrice > 0
-        ? Math.round(((oldPrice - displayPrice) / oldPrice) * 100)
-        : 0;
-      discountLabel = `${percent}% OFF`;
-    }
-  } else if (product.discount > 0) {
-    displayPrice = product.price * (1 - product.discount / 100);
-    oldPrice = product.price;
-    discountLabel = `${product.discount}% OFF`;
-  }
-  return { displayPrice, oldPrice, discountLabel };
-};
+import { cn } from "../../utils/utils.js";
+import { BASE_URL } from "../../utils/api.js";
 
 export default function ProductGrid() {
   const navigate = useNavigate();
@@ -68,6 +25,21 @@ export default function ProductGrid() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [discountMap, setDiscountMap] = useState({});
+
+  // Helper function to get the first image URL from a product
+  const getFirstProductImage = (product) => {
+    if (product.images && product.images.length > 0) {
+      return product.images[0].image_url;
+    }
+    return '../../assets/default/banner_home.jpeg';
+  };
+
+  // Helper: format IDR currency
+  const formatIDR = (value) =>
+    "Rp " +
+    Number(value)
+      .toLocaleString("id-ID", { maximumFractionDigits: 2 })
+      .replace(/,/g, ".");
 
   // Fetch products and discounts from API
   useEffect(() => {
@@ -97,9 +69,11 @@ export default function ProductGrid() {
         });
         setDiscountMap(discountMap);
 
-        // Transform data and sort by creation date (newest first)
-        const transformedProducts = data
+        // Filter only jewelset products and transform data
+        let necklaceProducts = data
+          .filter(product => product.category && product.category.toLowerCase() === "jewelset")
           .map(product => ({
+            ...product,
             id: product.id,
             name: product.name,
             type: product.label ? product.label.toUpperCase() : "",
@@ -109,36 +83,38 @@ export default function ProductGrid() {
             image: getFirstProductImage(product),
             stock: product.stock,
             soldStock: product.sold_stok || 0,
-            createdAt: product.created_at || new Date().toISOString(),
-            category: product.category
-          }))
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            createdAt: product.created_at || new Date().toISOString()
+          }));
 
         // Identify best sellers (top 10 by sold stock)
-        const bySoldStock = [...transformedProducts].sort((a, b) => b.soldStock - a.soldStock);
+        const bySoldStock = [...necklaceProducts].sort((a, b) => b.soldStock - a.soldStock);
         const bestSellerIds = bySoldStock.slice(0, 10).map(p => p.id);
 
         // Identify new arrivals (top 10 most recent)
-        const byCreationDate = [...transformedProducts].sort((a, b) =>
+        const byCreationDate = [...necklaceProducts].sort((a, b) =>
           new Date(b.createdAt) - new Date(a.createdAt));
         const newArrivalIds = byCreationDate.slice(0, 10).map(p => p.id);
 
         // Identify oldest products (top 10 oldest)
-        const byCreationDateOldest = [...transformedProducts].sort((a, b) =>
+        const byCreationDateOldest = [...necklaceProducts].sort((a, b) =>
           new Date(a.createdAt) - new Date(b.createdAt));
         const oldestIds = byCreationDateOldest.slice(0, 10).map(p => p.id);
 
         // Add category information to products
-        const finalProducts = transformedProducts.map(product => ({
+        necklaceProducts = necklaceProducts.map(product => ({
           ...product,
           isBestSeller: bestSellerIds.includes(product.id),
           isNewArrival: newArrivalIds.includes(product.id),
-          isOldest: oldestIds.includes(product.id),
-          ...getDiscounted(product, discountMap)
+          isOldest: oldestIds.includes(product.id)
         }));
 
-        setProducts(finalProducts);
-        setFilteredProducts(finalProducts);
+        setProducts(necklaceProducts);
+        setFilteredProducts(
+          necklaceProducts.map(product => ({
+            ...product,
+            ...getDiscounted(product, discountMap)
+          }))
+        );
       } catch (err) {
         setError(err.message);
       } finally {
@@ -150,63 +126,44 @@ export default function ProductGrid() {
     // eslint-disable-next-line
   }, []);
 
-  // Re-apply discount logic if products/discountMap changes
-  useEffect(() => {
-    setFilteredProducts(
-      products.map(product => ({
-        ...product,
-        ...getDiscounted(product, discountMap)
-      }))
-    );
-    // eslint-disable-next-line
-  }, [products, discountMap]);
-
-  const handleProductClick = (productId) => {
-    navigate(`/products/${productId}`);
-  };
-
-  const productsPerPage = layout === "grid" ? 12 : 8;
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-
-  const startIndex = (currentPage - 1) * productsPerPage;
-  const currentProducts = filteredProducts.slice(
-    startIndex,
-    startIndex + productsPerPage
-  );
-
-  const toggleFilter = (category, value) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev };
-      if (category === "price") {
-        if (newFilters[category].includes(value)) {
-          newFilters[category] = [];
-        } else {
-          newFilters[category] = [value];
-        }
-      } else {
-        if (newFilters[category].includes(value)) {
-          newFilters[category] = newFilters[category].filter(
-            (item) => item !== value
-          );
-        } else {
-          newFilters[category] = [...newFilters[category], value];
-        }
+  // Discount price calculation logic per product
+  const getDiscounted = (product, discountMapArg) => {
+    // Defensive: product.id could be string or number, discountMap keys as string
+    const discountItem = (discountMapArg || discountMap)[`${product.id}`];
+    let displayPrice = product.price;
+    let oldPrice = null;
+    let discountLabel = "";
+    if (discountItem) {
+      const discountType = discountItem.discount_type;
+      const discountValue = parseFloat(discountItem.discount_value || "0");
+      if (discountType === "percent") {
+        displayPrice = product.price * (1 - discountValue / 100);
+        oldPrice = product.price;
+        discountLabel = `${discountValue}% OFF`;
+      } else if (discountType === "amount") {
+        displayPrice = discountValue;
+        oldPrice = product.price;
+        const percent = oldPrice > 0
+          ? Math.round(((oldPrice - displayPrice) / oldPrice) * 100)
+          : 0;
+        discountLabel = `${percent}% OFF`;
       }
-      return newFilters;
-    });
+    } else if (product.discount > 0) {
+      displayPrice = product.price * (1 - product.discount / 100);
+      oldPrice = product.price;
+      discountLabel = `${product.discount}% OFF`;
+    }
+    return { displayPrice, oldPrice, discountLabel };
   };
 
-  const isChecked = (category, value) => {
-    return filters[category].includes(value);
-  };
-
+  // Filtering and sorting logic
   const handleDone = () => {
     setIsPopupOpen(false);
 
-    // Filtering and sorting logic, with discount-aware prices
+    // Apply discount logic to all products for accurate filtering/sorting
     let filtered = products.map(product => ({
       ...product,
-      ...getDiscounted(product, discountMap)
+      ...getDiscounted(product)
     }));
 
     if (filters.material.length > 0) {
@@ -244,9 +201,59 @@ export default function ProductGrid() {
     });
     setFilteredProducts(products.map(product => ({
       ...product,
-      ...getDiscounted(product, discountMap)
+      ...getDiscounted(product)
     })));
     setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    // After products/discountMap changes, always update filteredProducts with discount logic
+    setFilteredProducts(
+      products.map(product => ({
+        ...product,
+        ...getDiscounted(product)
+      }))
+    );
+    // eslint-disable-next-line
+  }, [products, discountMap]);
+
+  const handleProductClick = (productId) => {
+    navigate(`/products/${productId}`);
+  };
+
+  const productsPerPage = layout === "grid" ? 12 : 8;
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const currentProducts = filteredProducts.slice(
+    startIndex,
+    startIndex + productsPerPage
+  );
+
+  const isChecked = (category, value) => {
+    return filters[category].includes(value);
+  };
+
+  const toggleFilter = (category, value) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev };
+      if (category === "price") {
+        if (newFilters[category].includes(value)) {
+          newFilters[category] = [];
+        } else {
+          newFilters[category] = [value];
+        }
+      } else {
+        if (newFilters[category].includes(value)) {
+          newFilters[category] = newFilters[category].filter(
+            (item) => item !== value
+          );
+        } else {
+          newFilters[category] = [...newFilters[category], value];
+        }
+      }
+      return newFilters;
+    });
   };
 
   if (isLoading) {
@@ -314,10 +321,9 @@ export default function ProductGrid() {
             } gap-6`}
           >
             {currentProducts.map((product) => {
-              const { displayPrice, oldPrice, discountLabel } = getDiscounted(product, discountMap);
+              const { displayPrice, oldPrice, discountLabel } = getDiscounted(product);
               const showBestSeller = product.isBestSeller;
               const showDiscount = !!discountLabel;
-              const showNewArrival = product.isNewArrival;
               return (
                 <div
                   key={product.id}
@@ -349,46 +355,15 @@ export default function ProductGrid() {
                         LOW STOCK
                       </div>
                     ) : null}
-
-                    {/* Best Seller, Discount, New Arrival Badges */}
-                    {/* If more than one badge, space vertically */}
-                    {showBestSeller && showDiscount && showNewArrival ? (
+                    
+                    {/* Both badges, separated */}
+                    {showBestSeller && showDiscount ? (
                       <>
                         <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
                           BEST SELLER
                         </div>
                         <div className="absolute top-10 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
                           {discountLabel}
-                        </div>
-                        <div className="absolute top-18 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          NEW
-                        </div>
-                      </>
-                    ) : showBestSeller && showDiscount ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          BEST SELLER
-                        </div>
-                        <div className="absolute top-10 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          {discountLabel}
-                        </div>
-                      </>
-                    ) : showBestSeller && showNewArrival ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#c3a46f] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          BEST SELLER
-                        </div>
-                        <div className="absolute top-10 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          NEW
-                        </div>
-                      </>
-                    ) : showDiscount && showNewArrival ? (
-                      <>
-                        <div className="absolute top-2 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          {discountLabel}
-                        </div>
-                        <div className="absolute top-10 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                          NEW
                         </div>
                       </>
                     ) : showBestSeller ? (
@@ -398,10 +373,6 @@ export default function ProductGrid() {
                     ) : showDiscount ? (
                       <div className="absolute top-2 right-2 bg-[#e46464] text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
                         {discountLabel}
-                      </div>
-                    ) : showNewArrival ? (
-                      <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded z-20 shadow" style={{right: '8px'}}>
-                        NEW
                       </div>
                     ) : null}
 

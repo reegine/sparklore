@@ -55,7 +55,7 @@ const Recommend = ({ setBaseImage }) => {
   return (
     <div className="bg-[#fdf9f0] ">
       <div className="max-w-7xl mx-auto pt-[5rem] pb-[5rem]">
-        <h2 className="text-2xl font-serif font-semibold mb-[2rem]">
+        <h2 className="text-2xl font-serif font-semibold mb-[2rem] px-[1rem]">
           YOU MIGHT ALSO LIKE...
         </h2>
         <div className="relative mb-10">
