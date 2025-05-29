@@ -71,7 +71,7 @@ export default function ProductGrid() {
 
         // Filter only jewelset products and transform data
         let necklaceProducts = data
-          .filter(product => product.category && product.category.toLowerCase() === "jewelset")
+          .filter(product => product.category && product.category.toLowerCase() === "jewel_set")
           .map(product => ({
             ...product,
             id: product.id,
@@ -218,7 +218,7 @@ export default function ProductGrid() {
   }, [products, discountMap]);
 
   const handleProductClick = (productId) => {
-    navigate(`/products/${productId}`);
+    navigate(`/products-jewelsets/${productId}`);
   };
 
   const productsPerPage = layout === "grid" ? 12 : 8;

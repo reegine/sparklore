@@ -33,6 +33,7 @@ import DetailPageSets from './pages/detail_page_sets.jsx'
 import MonthlySpecials from './pages/monthly_specials.jsx'
 import FinalCheckoutQRISPage from './pages/final_checkout_qris.jsx'
 import FinalCheckoutVAPage from './pages/final_checkout _va.jsx'
+import DetailPageJewelSets from './pages/detail_page_jewelsets.jsx'
 
 const router = createBrowserRouter([
   {path:"/", element: <Home/>},
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
   {path:"/products/:productId", element: <DetailPage />},
   {path:"/products-charm/:productId", element: <DetailPageCharm />},
   {path:"/products-sets/:productId", element: <DetailPageSets />},
+  {path:"/products-jewelsets/:productId", element: <DetailPageJewelSets />},
   {path:"/login", element: <Login />},
   {path:"/verify", element: <OTPCode />},
   {path:"/checkout", element: <Checkout />},
