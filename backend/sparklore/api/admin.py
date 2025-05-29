@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Charm, DiscountedItem, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm, ProductImage, VideoContent, PageBanner, PhotoGallery, DiscountCampaign, GiftSet
+from .models import Charm, DiscountedItem, GiftSetOrBundleMonthlySpecial, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm, ProductImage, VideoContent, PageBanner, PhotoGallery, DiscountCampaign
 
 @admin.register(Charm)
 class CharmAdmin(admin.ModelAdmin):
@@ -19,7 +19,7 @@ class ProductImageAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price', 'label', 'stock', 'details')
     list_filter = ('category', 'label')
-    filter_horizontal = ('gift_set_products',) 
+    filter_horizontal = ('jewel_set_products',) 
     search_fields = ['name']
     inlines = [ProductImageInline]
 
@@ -97,9 +97,9 @@ class DiscountedItemAdmin(admin.ModelAdmin):
     list_filter = ('discount_type', 'campaign')
     search_fields = ['product__name']
 
-@admin.register(GiftSet)
-class GiftSetAdmin(admin.ModelAdmin):
-    list_display = ('name', 'label', 'price', 'created_at')
+@admin.register(GiftSetOrBundleMonthlySpecial)
+class GiftSetOrBundleMonthlySpecialAdmin(admin.ModelAdmin):
+    list_display = ('name', 'label', 'price', 'created_at', 'is_monthly_special')
     list_filter = ('label',)
     search_fields = ('name',)
     filter_horizontal = ('products',)
