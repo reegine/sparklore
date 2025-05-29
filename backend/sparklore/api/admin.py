@@ -17,7 +17,7 @@ class ProductImageAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'label', 'stock')
+    list_display = ('name', 'category', 'price', 'label', 'stock', 'details')
     list_filter = ('category', 'label')
     filter_horizontal = ('gift_set_products',) 
     search_fields = ['name']

@@ -68,6 +68,7 @@ class Product(models.Model):
     label = models.CharField(max_length=100, choices=LABEL_CHOICES)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     description = models.TextField(blank=True, null=True)
+    details = models.TextField(blank=True, null=True)
     stock = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     sold_stok = models.IntegerField(default=0)
