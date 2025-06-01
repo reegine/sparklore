@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Charm, DiscountedItem, GiftSetOrBundleMonthlySpecial, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm, ProductImage, VideoContent, PageBanner, PhotoGallery, DiscountCampaign
+from .models import Charm, DiscountedItem, GiftSetOrBundleMonthlySpecial, OrderItem, OrderItemCharm, Product, Order, Review, NewsletterSubscriber, Cart, CartItem, CartItemCharm, ProductImage, VideoContent, PageBanner, PhotoGallery, DiscountCampaign
 
 @admin.register(Charm)
 class CharmAdmin(admin.ModelAdmin):
@@ -22,13 +22,6 @@ class ProductAdmin(admin.ModelAdmin):
     filter_horizontal = ('jewel_set_products',) 
     search_fields = ['name']
     inlines = [ProductImageInline]
-
-@admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
-    list_display = ('user', 'total_price', 'status')
-    list_filter = ('status',)
-    date_hierarchy = 'created_at'
-    readonly_fields = ('created_at', 'updated_at')
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
@@ -103,3 +96,32 @@ class GiftSetOrBundleMonthlySpecialAdmin(admin.ModelAdmin):
     list_filter = ('label',)
     search_fields = ('name',)
     filter_horizontal = ('products',)
+
+class OrderItemCharmInline(admin.TabularInline):
+    model = OrderItemCharm
+    extra = 0
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ['product', 'gift_set', 'quantity']
+    show_change_link = True
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'payment_status', 'fulfillment_status', 'total_price', 'created_at')
+    list_filter = ('payment_status', 'fulfillment_status', 'created_at')
+    search_fields = ('user__email', 'id')
+    inlines = [OrderItemInline]
+    readonly_fields = ('total_price', 'created_at', 'updated_at')
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order', 'product', 'gift_set', 'quantity')
+    inlines = [OrderItemCharmInline]
+    search_fields = ('order__id', 'product__name')
+
+@admin.register(OrderItemCharm)
+class OrderItemCharmAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order_item', 'charm')
+    search_fields = ('order_item__order__id', 'charm__name')

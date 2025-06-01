@@ -124,17 +124,46 @@ class GiftSetOrBundleMonthlySpecial(models.Model):
             raise ValidationError("Harga gift set tidak boleh negatif.")
 
 class Order(models.Model):
+    class PaymentStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        PAID = 'paid', 'Paid'
+        FAILED = 'failed', 'Failed'
+
+    class FulfillmentStatus(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        PACKING = 'packing', 'Packing'
+        DELIVERY = 'delivery', 'Delivery'
+        DONE = 'done', 'Done'
+        NOT_ACCEPTED = 'not_accepted', 'Not Accepted'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    products = models.ManyToManyField(Product)
+    payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
+    fulfillment_status = models.CharField(max_length=20, choices=FulfillmentStatus.choices, default=FulfillmentStatus.PENDING)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(choices=[('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed')], max_length=10)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     shipping_address = models.CharField(max_length=255)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    rejection_reason = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Order {self.id} by {self.user.email} - {self.status}"
+        return f"Order #{self.id} - {self.user.email} ({self.payment_status})"
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
+    gift_set = models.ForeignKey(GiftSetOrBundleMonthlySpecial, on_delete=models.SET_NULL, null=True, blank=True)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"OrderItem in Order #{self.order.id}"
+
+class OrderItemCharm(models.Model):
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='charms')
+    charm = models.ForeignKey(Charm, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.charm.name} in OrderItem #{self.order_item.id}"
 
 class NewsletterSubscriber(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -169,7 +198,8 @@ class Cart(models.Model):
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, blank=True, null=True)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, blank=True, null=True)
+    gift_set = models.ForeignKey(GiftSetOrBundleMonthlySpecial, on_delete=models.SET_NULL, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
     charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
 
@@ -188,8 +218,7 @@ class CartItemCharm(models.Model):
 
     def __str__(self):
         return f"{self.charm.name} - {self.item.product.name} in {self.item.cart.user.email}'s cart"
-    
-        
+
 class VideoContent(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)

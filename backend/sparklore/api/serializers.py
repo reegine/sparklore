@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Charm, GiftSetOrBundleMonthlySpecial, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
+from .models import Charm, GiftSetOrBundleMonthlySpecial, OrderItem, OrderItemCharm, Product, Order, Review, NewsletterSubscriber, CartItem, Cart, CartItemCharm, VideoContent, ProductImage, PageBanner, PhotoGallery, DiscountedItem, DiscountCampaign
 from django.core.mail import send_mail
 User = get_user_model()
 from django.conf import settings
@@ -75,7 +75,6 @@ class OrderSerializer(serializers.ModelSerializer):
         if total + data.get('shipping_cost', 0) != data['total_price']:
             raise serializers.ValidationError("Total price harus sama dengan total produk + ongkir.")
         return data
-
 
 class ProductImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
@@ -207,3 +206,33 @@ class DiscountCampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiscountCampaign
         fields = ['id', 'name', 'description', 'start_time', 'end_time', 'items']
+
+class OrderItemCharmSerializer(serializers.ModelSerializer):
+    charm_name = serializers.CharField(source='charm.name', read_only=True)
+
+    class Meta:
+        model = OrderItemCharm
+        fields = ['id', 'charm', 'charm_name']
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    gift_set_name = serializers.CharField(source='gift_set.name', read_only=True)
+    charms = OrderItemCharmSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'product_name', 'gift_set', 'gift_set_name', 'quantity', 'charms']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'user', 'user_email',
+            'payment_status', 'fulfillment_status',
+            'total_price', 'shipping_address', 'shipping_cost', 'rejection_reason',
+            'items', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']

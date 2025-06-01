@@ -4,7 +4,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .models import Charm, DiscountCampaign, GiftSetOrBundleMonthlySpecial, NewsletterSubscriber, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
+from .models import Charm, DiscountCampaign, GiftSetOrBundleMonthlySpecial, NewsletterSubscriber, OrderItem, OrderItemCharm, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
 from .serializers import (
     CharmSerializer, DiscountCampaignSerializer, GiftSetOrBundleMonthlySpecialProductSerializer, ProductSerializer,
     CartSerializer, CartItemSerializer,
@@ -22,14 +22,6 @@ class CharmViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'category']
-
-class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -98,65 +90,88 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def checkout(request):
-    cart = Cart.objects.prefetch_related('items__product', 'items__charms').filter(user=request.user).first()
+    cart = Cart.objects.prefetch_related('items__product', 'items__gift_set', 'items__charms').filter(user=request.user).first()
     if not cart or not cart.items.exists():
         return Response({'error': 'Keranjang kosong.'}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
         total_price = 0
-        for item in cart.items.all():
-            # Validasi stok produk
-            if item.quantity > item.product.stock:
-                return Response({'error': f"Stok tidak cukup untuk produk {item.product.name}"}, status=400)
+        order = Order.objects.create(
+            user=request.user,
+            payment_status='pending',
+            fulfillment_status='pending',
+            shipping_address=request.data.get('shipping_address', '-'),
+            shipping_cost=request.data.get('shipping_cost', 0),
+            total_price=0,
+        )
 
-            item_total = item.product.price * item.quantity if item.product else 0
+        for item in cart.items.all():
+            if not item.product and not item.gift_set:
+                return Response({'error': 'Item harus berisi produk atau gift set'}, status=400)
+            if item.product and item.gift_set:
+                return Response({'error': 'Item tidak boleh memiliki dua sumber produk sekaligus'}, status=400)
+
+            if item.product:
+                if item.quantity > item.product.stock:
+                    return Response({'error': f"Stok tidak cukup untuk produk {item.product.name}"}, status=400)
+                item_total = item.product.price * item.quantity
+            else:
+                item_total = item.gift_set.price * item.quantity
+
             charm_total = sum([charm.price for charm in item.charms.all()]) * item.quantity
             total_price += item_total + charm_total
 
-            # Kurangi stok produk
-            item.product.stock -= item.quantity
-            item.product.sold_stok += item.quantity
-            item.product.save()
+            order_item = OrderItem.objects.create(
+                order=order,
+                product=item.product,
+                gift_set=item.gift_set,
+                quantity=item.quantity
+            )
 
-        order = Order.objects.create(
-            user=request.user,
-            total_price=total_price,
-            status='pending',
-            shipping_address=request.data.get('shipping_address', '-'),
-            shipping_cost=request.data.get('shipping_cost', 0),
-        )
-        order.products.set([item.product for item in cart.items.all()])
-        
-        # Hapus isi keranjang
+            for charm in item.charms.all():
+                OrderItemCharm.objects.create(order_item=order_item, charm=charm)
+
+            if item.product:
+                item.product.stock -= item.quantity
+                item.product.sold_stok += item.quantity
+                item.product.save()
+
+        order.total_price = total_price + order.shipping_cost
+        order.save()
+
         cart.items.all().delete()
 
-    return Response({'message': 'Checkout berhasil', 'order_id': order.id}, status=201)
+    return Response({
+        'message': 'Checkout berhasil',
+        'order_id': order.id,
+        'total_price': order.total_price
+    }, status=status.HTTP_201_CREATED)
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def checkout(request):
-#     cart = get_object_or_404(Cart, user=request.user)
-#     if not cart.items.exists():
-#         return Response({'error':'Cart kosong'}, status=status.HTTP_400_BAD_REQUEST)
-#     with transaction.atomic():
-#         total = sum((item.product.price * item.quantity) + sum(c.price for c in item.charms.all())
-#                     for item in cart.items.all())
-#         # estimate shipping
-#         est = RajaOngkirService.estimate_cost(...)
-#         shipping_cost = est['rajaongkir']['results'][0]['costs'][0]['cost'][0]['value']
-#         order = Order.objects.create(
-#             user=request.user, total_price=total, shipping_address=request.data['shipping_address'],
-#             shipping_cost=shipping_cost
-#         )
-#         # Midtrans charge
-#         mid = MidtransService.create_transaction(order.id, float(order.total_price+shipping_cost),
-#                                                 request.data.get('payment_type','qris'))
-#         Payment.objects.create(
-#             order=order, transaction_id=mid['transaction_id'], method=mid['payment_type'],
-#             amount=mid['gross_amount'], status=mid['transaction_status']
-#         )
-#         cart.items.all().delete()
-#     return Response({'order_id':order.id, 'midtrans':mid})
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by('-created_at')
+
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        order = self.get_object()
+        new_status = request.data.get('fulfillment_status')
+        rejection_reason = request.data.get('rejection_reason', '')
+
+        if new_status not in dict(Order.FulfillmentStatus.choices):
+            return Response({'error': 'Invalid status'}, status=400)
+
+        if new_status == Order.FulfillmentStatus.NOT_ACCEPTED and not rejection_reason:
+            return Response({'error': 'Alasan penolakan wajib diisi untuk status not accepted'}, status=400)
+
+        order.fulfillment_status = new_status
+        order.rejection_reason = rejection_reason if new_status == Order.FulfillmentStatus.NOT_ACCEPTED else ''
+        order.save()
+
+        return Response({'message': f'Status updated to {new_status}'})
 
 class VideoContentViewSet(viewsets.ModelViewSet):
     queryset = VideoContent.objects.all()
