@@ -147,6 +147,77 @@ def checkout(request):
         'total_price': order.total_price
     }, status=status.HTTP_201_CREATED)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def direct_checkout(request):
+    item_type = request.data.get('type')
+    item_id = request.data.get('item_id')
+    charms_ids = request.data.get('charms', [])
+    quantity = int(request.data.get('quantity', 1))
+    shipping_address = request.data.get('shipping_address', '-')
+    shipping_cost = float(request.data.get('shipping_cost', 0))
+
+    if item_type not in ['product', 'gift_set', 'charm']:
+        return Response({'error': 'Invalid type. Use product, charm, or gift_set.'}, status=400)
+
+    with transaction.atomic():
+        total_price = 0
+        order = Order.objects.create(
+            user=request.user,
+            payment_status='pending',
+            fulfillment_status='pending',
+            shipping_address=shipping_address,
+            shipping_cost=shipping_cost,
+            total_price=0
+        )
+
+        product = None
+        gift_set = None
+
+        if item_type == 'product':
+            product = get_object_or_404(Product, id=item_id)
+            if quantity > product.stock:
+                return Response({'error': 'Stok produk tidak mencukupi'}, status=400)
+            item_total = product.price * quantity
+            product.stock -= quantity
+            product.sold_stok += quantity
+            product.save()
+        elif item_type == 'gift_set':
+            gift_set = get_object_or_404(GiftSetOrBundleMonthlySpecial, id=item_id)
+            item_total = gift_set.price * quantity
+        elif item_type == 'charm':
+            charm = get_object_or_404(Charm, id=item_id)
+            item_total = charm.price * quantity
+
+        charm_total = 0
+        charm_objs = []
+        if charms_ids:
+            charm_objs = Charm.objects.filter(id__in=charms_ids)
+            if len(charm_objs) > 5:
+                return Response({'error': 'Maksimal 5 charms'}, status=400)
+            if product and not product.charms:
+                return Response({'error': 'Produk ini tidak mendukung charms'}, status=400)
+            charm_total = sum([charm.price for charm in charm_objs]) * quantity
+
+        order_item = OrderItem.objects.create(
+            order=order,
+            product=product,
+            gift_set=gift_set,
+            quantity=quantity
+        )
+
+        for charm in charm_objs:
+            OrderItemCharm.objects.create(order_item=order_item, charm=charm)
+
+        order.total_price = item_total + charm_total + shipping_cost
+        order.save()
+
+    return Response({
+        'message': 'Direct checkout berhasil',
+        'order_id': order.id,
+        'total_price': order.total_price
+    }, status=status.HTTP_201_CREATED)
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
