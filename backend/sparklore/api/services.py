@@ -1,30 +1,33 @@
-# import requests
-# from django.conf import settings
+# services/rajaongkir.py
+import requests
 
-# class MidtransService:
-#     base_url = 'https://api.midtrans.com/v2'
-#     auth = (settings.MIDTRANS_SERVER_KEY, '')
+class RajaOngkirService:
+    BASE_URL = "https://api-sandbox.collaborator.komerce.id"
+    API_KEY = "AoOw06w55e33564243a602b7KA7bs16i"
 
-#     @classmethod
-#     def create_transaction(cls, order_id, amount, payment_type, **kwargs):
-#         payload = {
-#             'transaction_details': {'order_id': order_id,'gross_amount': amount},
-#             'payment_type': payment_type,
-#             **kwargs
-#         }
-#         resp = requests.post(f'{cls.base_url}/charge', json=payload, auth=cls.auth)
-#         return resp.json()
+    @classmethod
+    def check_shipping_cost(cls, shipper_id, receiver_id, weight, item_value=0, cod=False, origin_pin_point=None, destination_pin_point=None):
+        url = f"{cls.BASE_URL}/tariff/api/v1/calculate"
+        params = {
+            "shipper_destination_id": shipper_id,
+            "receiver_destination_id": receiver_id,
+            "weight": weight,
+            "item_value": item_value,
+            "cod": "yes" if cod else "no",
+        }
+        if origin_pin_point:
+            params["origin_pin_point"] = origin_pin_point
+        if destination_pin_point:
+            params["destination_pin_point"] = destination_pin_point
 
-# class RajaOngkirService:
-#     url = 'https://api.rajaongkir.com/starter'
-#     headers = {'key': settings.RAJA_ONGKIR_KEY, 'Content-Type':'application/json'}
+        headers = {
+            "accept": "application/json",
+            "x-api-key": cls.API_KEY
+        }
 
-#     @classmethod
-#     def estimate_cost(cls, origin, destination, weight, courier):
-#         data = {'origin':origin,'destination':destination,'weight':weight,'courier':courier}
-#         return requests.post(f'{cls.url}/cost', json=data, headers=cls.headers).json()
-
-#     @classmethod
-#     def create_shipment(cls, order_id, origin, destination, weight, courier):
-#         # stub; RajaOngkir tidak sediakan create resi via API starter
-#         return {'status':'OK','resi':'JNE1234567890'}
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {"error": str(e)}

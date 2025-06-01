@@ -1,8 +1,9 @@
-from datetime import timezone
+from .services import RajaOngkirService
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from .models import Charm, DiscountCampaign, GiftSetOrBundleMonthlySpecial, NewsletterSubscriber, OrderItem, OrderItemCharm, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
 from .serializers import (
@@ -266,3 +267,23 @@ class DiscountCampaignViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return DiscountCampaign.objects.all()
+
+@api_view(['GET'])
+def check_shipping_cost(request):
+    shipper_id = request.query_params.get('shipper_id')
+    receiver_id = request.query_params.get('receiver_id')
+    weight = request.query_params.get('weight')
+    item_value = request.query_params.get('item_value')
+    cod = request.query_params.get('cod')
+
+    if not all([shipper_id, receiver_id, weight]):
+        return Response({'error': 'Missing required parameters'}, status=400)
+
+    # Hitung biaya pengiriman (contoh dummy logic)
+    base_cost = 10000
+    cost = base_cost + float(weight) * 5000
+
+    if cod == 'yes':
+        cost += 3000  # Biaya tambahan untuk COD
+
+    return Response({'shipping_cost': cost})
