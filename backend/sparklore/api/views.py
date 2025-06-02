@@ -268,22 +268,28 @@ class DiscountCampaignViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return DiscountCampaign.objects.all()
 
-@api_view(['GET'])
-def check_shipping_cost(request):
-    shipper_id = request.query_params.get('shipper_id')
-    receiver_id = request.query_params.get('receiver_id')
-    weight = request.query_params.get('weight')
-    item_value = request.query_params.get('item_value')
-    cod = request.query_params.get('cod')
+@api_view(["GET"])
+def get_shipping_cost(request):
+    origin = "jatibening"
+    destination = request.query_params.get("destination")
+    weight = request.query_params.get("weight", 1000)  # default 1000 gram
 
-    if not all([shipper_id, receiver_id, weight]):
-        return Response({'error': 'Missing required parameters'}, status=400)
+    try:
+        result = RajaOngkirService.calculate_shipping_cost(origin, destination, weight)
+        return Response(result)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
 
-    # Hitung biaya pengiriman (contoh dummy logic)
-    base_cost = 10000
-    cost = base_cost + float(weight) * 5000
+@api_view(["GET"])
+def track_resi(request):
+    awb = request.query_params.get("awb")
+    courier = request.query_params.get("courier")
 
-    if cod == 'yes':
-        cost += 3000  # Biaya tambahan untuk COD
+    if not awb or not courier:
+        return Response({"error": "awb and courier are required"}, status=400)
 
-    return Response({'shipping_cost': cost})
+    try:
+        result = RajaOngkirService.track_waybill(awb, courier)
+        return Response(result)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)

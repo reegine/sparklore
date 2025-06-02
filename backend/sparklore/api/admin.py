@@ -35,29 +35,61 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
 class CartItemCharmInline(admin.TabularInline):
     model = CartItemCharm
     extra = 1
+    autocomplete_fields = ['charm']
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 1
     show_change_link = True
+    autocomplete_fields = ['product', 'gift_set']
+    readonly_fields = ['display_product_or_gift_set']
+    fields = ['display_product_or_gift_set', 'product', 'gift_set', 'quantity']
+
+    def display_product_or_gift_set(self, obj):
+        if obj.product:
+            return f"[Product] {obj.product.name}"
+        elif obj.gift_set:
+            return f"[GiftSet] {obj.gift_set.name}"
+        return "-"
+    display_product_or_gift_set.short_description = "Product / Gift Set"
 
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
-    list_display = ('user', 'created_at')
+    list_display = ('user', 'created_at', 'total_items', 'cart_owner')
     list_filter = ('created_at',)
     search_fields = ['user__email']
     inlines = [CartItemInline]
 
+    def total_items(self, obj):
+        return obj.items.count()
+    total_items.short_description = "Jumlah Item"
+
+    def cart_owner(self, obj):
+        return obj.item.cart.user.email
+    cart_owner.short_description = "Pemilik Cart"
+
+
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
-    list_display = ('cart', 'product', 'quantity')
-    list_filter = ('product',)
+    list_display = ('cart', 'display_product_or_gift_set', 'quantity')
+    list_filter = ('product','gift_set')
     inlines = [CartItemCharmInline]
+    autocomplete_fields = ['cart', 'product', 'gift_set']
+    search_fields = ['cart__user__email', 'product__name', 'gift_set__name'] 
+
+    def display_product_or_gift_set(self, obj):
+        if obj.product:
+            return f"[Product] {obj.product.name}"
+        elif obj.gift_set:
+            return f"[GiftSet] {obj.gift_set.name}"
+        return "-"
+    display_product_or_gift_set.short_description = "Produk / Gift Set"
 
 @admin.register(CartItemCharm)
 class CartItemCharmAdmin(admin.ModelAdmin):
     list_display = ('item', 'charm')
     list_filter = ('charm',)
+    autocomplete_fields = ['item', 'charm']
 
 @admin.register(VideoContent)
 class VideoContentAdmin(admin.ModelAdmin):
