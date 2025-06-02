@@ -148,30 +148,6 @@ class GiftSetOrBundleMonthlySpecialProductSerializer(serializers.ModelSerializer
         request = self.context.get('request')
         return request.build_absolute_uri(obj.image.url) if obj.image else None
 
-class CartItemCharmSerializer(serializers.ModelSerializer):
-    class Meta: model = CartItemCharm; fields = ['charm_id']
-
-class CartItemSerializer(serializers.ModelSerializer):
-    charms = serializers.PrimaryKeyRelatedField(queryset=Charm.objects.all(), many=True)
-    class Meta:
-        model = CartItem; fields = ['id','product','quantity','charms']
-
-    def validate(self, data):
-        product = data.get('product')
-        charms = data.get('charms', [])
-
-        if len(charms) > 5:
-            raise serializers.ValidationError('Max 5 charms per item.')
-
-        if product:
-            if product.category not in ['necklace', 'bracelet'] and charms:
-                raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
-        return data
-
-class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(many=True)
-    class Meta: model = Cart; fields = ['id','items']
-
 class VideoContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = VideoContent
@@ -236,3 +212,38 @@ class OrderSerializer(serializers.ModelSerializer):
             'items', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+class CartItemCharmSerializer(serializers.ModelSerializer):
+    class Meta: model = CartItemCharm; fields = ['charm_id']
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    gift_set = GiftSetOrBundleMonthlySpecialProductSerializer(read_only=True)
+    charms = serializers.PrimaryKeyRelatedField(queryset=Charm.objects.all(), many=True)
+    source_type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem; fields =  ['id', 'product', 'gift_set', 'quantity', 'charms', 'source_type']
+
+    def get_source_type(self, obj):
+        if obj.product:
+            return 'product'
+        elif obj.gift_set:
+            return 'gift_set'
+        return 'unknown'
+
+    def validate(self, data):
+        product = data.get('product')
+        charms = data.get('charms', [])
+
+        if len(charms) > 5:
+            raise serializers.ValidationError('Max 5 charms per item.')
+
+        if product:
+            if product.category not in ['necklace', 'bracelet'] and charms:
+                raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
+        return data
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True)
+    class Meta: model = Cart; fields = ['id','items']
