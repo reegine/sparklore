@@ -85,7 +85,12 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         request = self.context.get('request')
-        return request.build_absolute_uri(obj.image.url) if obj.image else None
+        if request and obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        elif obj.image:
+            return obj.image.url  # fallback if request is None
+        return None
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -146,7 +151,11 @@ class GiftSetOrBundleMonthlySpecialProductSerializer(serializers.ModelSerializer
 
     def get_image_url(self, obj):
         request = self.context.get('request')
-        return request.build_absolute_uri(obj.image.url) if obj.image else None
+        if request and obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        elif obj.image:
+            return obj.image.url  # fallback if request is None
+        return None
 
 class VideoContentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -162,7 +171,12 @@ class PageBannerSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         request = self.context.get('request')
-        return request.build_absolute_uri(obj.image.url) if obj.image else None
+        if request and obj.image:
+            return request.build_absolute_uri(obj.image.url)
+        elif obj.image:
+            return obj.image.url  # fallback if request is None
+        return None
+
 
 class PhotoGalerySerializer(serializers.ModelSerializer):
     class Meta:
