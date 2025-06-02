@@ -204,8 +204,11 @@ class CartItem(models.Model):
     charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
 
     def __str__(self):
-        product_name = self.product.name if self.product else "-"
-        return f"{product_name} - {self.quantity} pcs in {self.cart.user.email}'s cart"
+        product_name = self.item.product.name if self.item.product else (
+            self.item.gift_set.name if self.item.gift_set else "No Product/Gift Set"
+        )
+        user_email = self.item.cart.user.email if self.item.cart and self.item.cart.user else "Unknown User"
+        return f"{self.charm.name} - {product_name} in {user_email}'s cart"
 
     def clean(self):
         if self.quantity <= 0:

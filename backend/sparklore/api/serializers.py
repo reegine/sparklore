@@ -246,6 +246,9 @@ class CartItemSerializer(serializers.ModelSerializer):
         if len(charms) > 5:
             raise serializers.ValidationError('Max 5 charms per item.')
 
+        if gift_set and (product or charms):
+            raise serializers.ValidationError('Gift set tidak boleh dikombinasikan dengan produk atau charms.')
+
         if not product and not gift_set and not charms:
             raise serializers.ValidationError('Harus memilih minimal satu dari: product, gift set, atau charms.')
 
