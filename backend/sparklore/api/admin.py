@@ -65,7 +65,7 @@ class CartAdmin(admin.ModelAdmin):
     total_items.short_description = "Jumlah Item"
 
     def cart_owner(self, obj):
-        return obj.item.cart.user.email
+        return obj.user.email
     cart_owner.short_description = "Pemilik Cart"
 
 
