@@ -45,7 +45,7 @@ class CartViewSet(viewsets.ViewSet):
 
     def list(self, request):
         cart, _ = Cart.objects.get_or_create(user=request.user)
-        return Response(CartSerializer(cart).data)
+        return Response(CartSerializer(cart, context={'request': request}).data)
 
     @action(detail=False, methods=['post'])
     def add(self, request):
@@ -55,7 +55,7 @@ class CartViewSet(viewsets.ViewSet):
         item = serializer.save(cart=cart)
         if 'charms' in serializer.validated_data:
             item.charms.set(serializer.validated_data['charms'])
-        return Response(CartSerializer(cart).data, status=status.HTTP_201_CREATED)        
+        return Response(CartSerializer(cart, context={'request': request}).data, status=status.HTTP_201_CREATED)        
 
     @action(detail=True, methods=['patch'])
     def update_item(self, request, pk=None):
@@ -66,14 +66,14 @@ class CartViewSet(viewsets.ViewSet):
         if 'charms' in serializer.validated_data:
             item.charms.set(serializer.validated_data['charms'])
         cart = item.cart
-        return Response(CartSerializer(cart).data)
+        return Response(CartSerializer(cart, context={'request': request}).data)
 
     @action(detail=True, methods=['delete'])
     def remove(self, request, pk=None):
         item = get_object_or_404(CartItem, pk=pk, cart__user=request.user)
         item.delete()
         cart = Cart.objects.get(user=request.user)
-        return Response(CartSerializer(cart).data)
+        return Response(CartSerializer(cart, context={'request': request}).data)
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()

@@ -240,10 +240,14 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         product = data.get('product')
+        gift_set = data.get('gift_set')
         charms = data.get('charms', [])
 
         if len(charms) > 5:
             raise serializers.ValidationError('Max 5 charms per item.')
+
+        if not product and not gift_set and not charms:
+            raise serializers.ValidationError('Harus memilih minimal satu dari: product, gift set, atau charms.')
 
         if product:
             if product.category not in ['necklace', 'bracelet'] and charms:

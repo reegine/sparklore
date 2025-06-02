@@ -204,8 +204,9 @@ class CartItem(models.Model):
     charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
 
     def __str__(self):
-        return f"{self.product.name} - {self.quantity} pcs in {self.cart.user.email}'s cart"
-    
+        product_name = self.product.name if self.product else "-"
+        return f"{product_name} - {self.quantity} pcs in {self.cart.user.email}'s cart"
+
     def clean(self):
         if self.quantity <= 0:
             raise ValidationError("Jumlah item harus lebih dari 0.")
