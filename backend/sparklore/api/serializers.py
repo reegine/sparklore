@@ -87,11 +87,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and obj.image:
             return request.build_absolute_uri(obj.image.url)
-        elif obj.image:
-            return obj.image.url  # fallback if request is None
         return None
-
-
 
 class ProductSerializer(serializers.ModelSerializer):
     jewel_set_products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), required=False)
@@ -153,8 +149,6 @@ class GiftSetOrBundleMonthlySpecialProductSerializer(serializers.ModelSerializer
         request = self.context.get('request')
         if request and obj.image:
             return request.build_absolute_uri(obj.image.url)
-        elif obj.image:
-            return obj.image.url  # fallback if request is None
         return None
 
 class VideoContentSerializer(serializers.ModelSerializer):
@@ -173,8 +167,6 @@ class PageBannerSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and obj.image:
             return request.build_absolute_uri(obj.image.url)
-        elif obj.image:
-            return obj.image.url  # fallback if request is None
         return None
 
 
