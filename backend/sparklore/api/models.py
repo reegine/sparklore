@@ -191,8 +191,6 @@ class Cart(models.Model):
         return f"{self.user.email} - Cart"
     
     def clean(self):
-        if not self.user.is_authenticated:
-            raise ValidationError("User harus terautentikasi untuk membuat keranjang belanja.")
         if Cart.objects.filter(user=self.user).exists():
             raise ValidationError("User sudah memiliki keranjang belanja yang aktif.")
 
@@ -204,12 +202,12 @@ class CartItem(models.Model):
     charms = models.ManyToManyField(Charm, blank=True, through='CartItemCharm')
 
     def __str__(self):
-        product_name = self.item.product.name if self.item.product else (
-            self.item.gift_set.name if self.item.gift_set else "No Product/Gift Set"
+        product_name = self.product.name if self.product else (
+            self.gift_set.name if self.gift_set else "No Product/Gift Set"
         )
-        user_email = self.item.cart.user.email if self.item.cart and self.item.cart.user else "Unknown User"
+        user_email = self.cart.user.email if self.cart and self.cart.user else "Unknown User"
         return f"{product_name} in {user_email}'s cart"
-
+    
     def clean(self):
         if self.quantity <= 0:
             raise ValidationError("Jumlah item harus lebih dari 0.")
