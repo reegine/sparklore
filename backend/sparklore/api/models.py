@@ -208,20 +208,29 @@ class CartItem(models.Model):
             self.item.gift_set.name if self.item.gift_set else "No Product/Gift Set"
         )
         user_email = self.item.cart.user.email if self.item.cart and self.item.cart.user else "Unknown User"
-        return f"{self.charm.name} - {product_name} in {user_email}'s cart"
+        return f"{product_name} in {user_email}'s cart"
 
     def clean(self):
         if self.quantity <= 0:
             raise ValidationError("Jumlah item harus lebih dari 0.")
         if self.product and self.product.stock < self.quantity:
             raise ValidationError("Stok tidak cukup untuk produk ini.")
+        if self.product and self.gift_set:
+            raise ValidationError("Hanya boleh memilih salah satu: product atau gift_set.")
+        if not self.product and not self.gift_set:
+            raise ValidationError("Harus memilih salah satu: product atau gift_set.")
 
 class CartItemCharm(models.Model):
     item = models.ForeignKey(CartItem, on_delete=models.CASCADE)
     charm = models.ForeignKey(Charm, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.charm.name} - {self.item.product.name} in {self.item.cart.user.email}'s cart"
+        item = self.item
+        product_name = item.product.name if item and item.product else (
+            item.gift_set.name if item and item.gift_set else "Unknown Item"
+        )
+        user_email = item.cart.user.email if item and item.cart and item.cart.user else "Unknown User"
+        return f"{self.charm.name} - {product_name} in {user_email}'s cart"
 
 class VideoContent(models.Model):
     title = models.CharField(max_length=255)
