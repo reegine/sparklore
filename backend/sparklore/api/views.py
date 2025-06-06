@@ -75,6 +75,74 @@ class CartViewSet(viewsets.ViewSet):
         cart = Cart.objects.get(user=request.user)
         return Response(CartSerializer(cart, context={'request': request}).data)
 
+    @action(detail=False, methods=['post'])
+    def selective_checkout(self, request):
+        cart_item_ids = request.data.get('cart_item_ids', [])
+        if not cart_item_ids:
+            return Response({'error': 'Pilih minimal satu item untuk checkout.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        cart = Cart.objects.prefetch_related('items__product', 'items__gift_set', 'items__charms').filter(user=request.user).first()
+        if not cart:
+            return Response({'error': 'Keranjang tidak ditemukan.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        selected_items = cart.items.filter(id__in=cart_item_ids)
+        if not selected_items.exists():
+            return Response({'error': 'Item yang dipilih tidak ditemukan di keranjang.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        with transaction.atomic():
+            total_price = 0
+            order = Order.objects.create(
+                user=request.user,
+                payment_status='pending',
+                fulfillment_status='pending',
+                shipping_address=request.data.get('shipping_address', '-'),
+                shipping_cost=request.data.get('shipping_cost', 0),
+                total_price=0,
+            )
+            
+            for item in selected_items:
+                if not item.product and not item.gift_set:
+                    return Response({'error': 'Item harus berisi produk atau gift set'}, status=400)
+                if item.product and item.gift_set:
+                    return Response({'error': 'Item tidak boleh memiliki dua sumber produk sekaligus'}, status=400)
+                
+                if item.product:
+                    if item.quantity > item.product.stock:
+                        return Response({'error': f"Stok tidak cukup untuk produk {item.product.name}"}, status=400)
+                    item_total = item.product.price * item.quantity
+                else:
+                    item_total = item.gift_set.price * item.quantity
+                
+                charm_total = sum([charm.price for charm in item.charms.all()]) * item.quantity
+                total_price += item_total + charm_total
+                
+                order_item = OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    gift_set=item.gift_set,
+                    quantity=item.quantity
+                )
+                
+                for charm in item.charms.all():
+                    OrderItemCharm.objects.create(order_item=order_item, charm=charm)
+                
+                if item.product:
+                    item.product.stock -= item.quantity
+                    item.product.sold_stok += item.quantity
+                    item.product.save()
+            
+            order.total_price = total_price + order.shipping_cost
+            order.save()
+            
+            selected_items.delete()
+        
+        return Response({
+            'message': 'Checkout berhasil',
+            'order_id': order.id,
+            'total_price': order.total_price,
+            'checked_out_items': len(selected_items)
+        }, status=status.HTTP_201_CREATED)
+
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer

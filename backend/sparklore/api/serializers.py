@@ -63,19 +63,6 @@ class CharmSerializer(serializers.ModelSerializer):
         model = Charm
         fields = '__all__'
 
-class OrderSerializer(serializers.ModelSerializer):
-    products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all())
-
-    class Meta:
-        model = Order
-        fields = '__all__'
-
-    def validate(self, data):
-        total = sum([p.price for p in data['products']])
-        if total + data.get('shipping_cost', 0) != data['total_price']:
-            raise serializers.ValidationError("Total price harus sama dengan total produk + ongkir.")
-        return data
-
 class ProductImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
@@ -239,9 +226,15 @@ class CartItemSerializer(serializers.ModelSerializer):
         return 'unknown'
 
     def validate(self, data):
-        product = data.get('product')
-        gift_set = data.get('gift_set')
-        charms = data.get('charms', [])
+        product = data.get('product') if 'product' in data else getattr(self.instance, 'product', None)
+        gift_set = data.get('gift_set') if 'gift_set' in data else getattr(self.instance, 'gift_set', None)
+
+        if 'charms' in data:
+            charms = data['charms']
+        elif self.instance:
+            charms = list(self.instance.charms.all())
+        else:
+            charms = []
 
         if len(charms) > 5:
             raise serializers.ValidationError('Max 5 charms per item.')

@@ -179,6 +179,7 @@ class Review(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     image = models.ImageField(upload_to="review_images/", blank=True, null=True)
     products = models.ManyToManyField(Product)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.user_name} - {self.rating}⭐"
@@ -189,10 +190,6 @@ class Cart(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - Cart"
-    
-    def clean(self):
-        if Cart.objects.filter(user=self.user).exists():
-            raise ValidationError("User sudah memiliki keranjang belanja yang aktif.")
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
@@ -215,8 +212,6 @@ class CartItem(models.Model):
             raise ValidationError("Stok tidak cukup untuk produk ini.")
         if self.product and self.gift_set:
             raise ValidationError("Hanya boleh memilih salah satu: product atau gift_set.")
-        if not self.product and not self.gift_set:
-            raise ValidationError("Harus memilih salah satu: product atau gift_set.")
 
 class CartItemCharm(models.Model):
     item = models.ForeignKey(CartItem, on_delete=models.CASCADE)
