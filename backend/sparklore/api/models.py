@@ -114,6 +114,9 @@ class GiftSetOrBundleMonthlySpecial(models.Model):
     products = models.ManyToManyField(Product, related_name='gift_sets')
     image = models.ImageField(upload_to='gift_sets/')
     created_at = models.DateTimeField(auto_now_add=True)
+    stock = models.IntegerField(default=0)
+    sold_stok = models.IntegerField(default=0)
+    discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     is_monthly_special = models.BooleanField(default=True, help_text="Apakah ini adalah produk spesial bulanan?")
 
     def __str__(self):
