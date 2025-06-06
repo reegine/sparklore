@@ -210,10 +210,10 @@ class CartItemCharmSerializer(serializers.ModelSerializer):
     class Meta: model = CartItemCharm; fields = ['charm_id']
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)
-    gift_set = GiftSetOrBundleMonthlySpecialProductSerializer(read_only=True)
-    charms = serializers.PrimaryKeyRelatedField(queryset=Charm.objects.all(), many=True)
-    source_type = serializers.SerializerMethodField()
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), required=False)
+    gift_set = serializers.PrimaryKeyRelatedField(queryset=GiftSetOrBundleMonthlySpecial.objects.all(), required=False)
+    charms = serializers.PrimaryKeyRelatedField(queryset=Charm.objects.all(), many=True, required=False)
+    source_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = CartItem; fields =  ['id', 'product', 'gift_set', 'quantity', 'charms', 'source_type']
