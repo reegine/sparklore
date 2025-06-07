@@ -212,7 +212,12 @@ class CartItemCharmSerializer(serializers.ModelSerializer):
 class CartItemSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), required=False)
     gift_set = serializers.PrimaryKeyRelatedField(queryset=GiftSetOrBundleMonthlySpecial.objects.all(), required=False)
-    charms = serializers.PrimaryKeyRelatedField(queryset=Charm.objects.all(), many=True, required=False)
+    charms = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        write_only=True 
+    )
+    charms = serializers.SerializerMethodField(read_only=True)
     source_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -249,6 +254,13 @@ class CartItemSerializer(serializers.ModelSerializer):
             if product.category not in ['necklace', 'bracelet'] and charms:
                 raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
         return data
+
+    def get_charms(self, obj):
+        charm_items = CartItemCharm.objects.filter(item=obj)
+        result = []
+        for charm_item in charm_items:
+            result.extend([charm_item.charm.id] * charm_item.quantity)
+        return result
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True)
