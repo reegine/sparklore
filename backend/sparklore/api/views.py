@@ -1,3 +1,4 @@
+from collections import Counter
 from .services import RajaOngkirService
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
@@ -5,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from .models import Charm, DiscountCampaign, GiftSetOrBundleMonthlySpecial, NewsletterSubscriber, OrderItem, OrderItemCharm, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
+from .models import CartItemCharm, Charm, DiscountCampaign, GiftSetOrBundleMonthlySpecial, NewsletterSubscriber, OrderItem, OrderItemCharm, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
 from .serializers import (
     CharmSerializer, DiscountCampaignSerializer, GiftSetOrBundleMonthlySpecialProductSerializer, ProductSerializer,
     CartSerializer, CartItemSerializer,
@@ -50,23 +51,41 @@ class CartViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
     def add(self, request):
         cart, _ = Cart.objects.get_or_create(user=request.user)
+        charms_input = request.data.pop('charms', [])
         serializer = CartItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         item = serializer.save(cart=cart)
-        if 'charms' in serializer.validated_data:
-            item.charms.set(serializer.validated_data['charms'])
+
+        if charms_input:
+            if len(charms_input) > 5:
+                return Response({'error': 'Max 5 charms per item.'}, status=400)
+            
+            charm_counts = Counter(charms_input)  # Contoh: {1: 3, 3: 2}
+            item.charms.clear()
+            for charm_id, qty in charm_counts.items():
+                charm = get_object_or_404(Charm, pk=charm_id)
+                CartItemCharm.objects.create(item=item, charm=charm, quantity=qty)
         return Response(CartSerializer(cart, context={'request': request}).data, status=status.HTTP_201_CREATED)        
 
     @action(detail=True, methods=['patch'])
     def update_item(self, request, pk=None):
         item = get_object_or_404(CartItem, pk=pk, cart__user=request.user)
+        charms_input = request.data.pop('charms', None)
         serializer = CartItemSerializer(item, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        if 'charms' in serializer.validated_data:
-            item.charms.set(serializer.validated_data['charms'])
-        cart = item.cart
-        return Response(CartSerializer(cart, context={'request': request}).data)
+
+        if charms_input is not None:
+            if len(charms_input) > 5:
+                return Response({'error': 'Max 5 charms per item.'}, status=400)
+            
+            item.charms.clear()
+            charm_counts = Counter(charms_input)
+            for charm_id, qty in charm_counts.items():
+                charm = get_object_or_404(Charm, pk=charm_id)
+                CartItemCharm.objects.create(item=item, charm=charm, quantity=qty)
+
+        return Response(CartSerializer(item.cart, context={'request': request}).data)
 
     @action(detail=True, methods=['delete'])
     def remove(self, request, pk=None):
@@ -123,8 +142,11 @@ class CartViewSet(viewsets.ViewSet):
                     quantity=item.quantity
                 )
                 
-                for charm in item.charms.all():
-                    OrderItemCharm.objects.create(order_item=order_item, charm=charm)
+                OrderItemCharm.objects.bulk_create([
+                    OrderItemCharm(order_item=order_item, charm=charm_relation.charm)
+                    for charm_relation in CartItemCharm.objects.filter(item=item)
+                    for _ in range(charm_relation.quantity)
+                ])
                 
                 if item.product:
                     item.product.stock -= item.quantity

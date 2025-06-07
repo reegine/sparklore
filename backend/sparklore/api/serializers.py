@@ -223,7 +223,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             return 'product'
         elif obj.gift_set:
             return 'gift_set'
-        return 'unknown'
+        return 'charms_only'
 
     def validate(self, data):
         product = data.get('product') if 'product' in data else getattr(self.instance, 'product', None)

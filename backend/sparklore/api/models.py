@@ -219,6 +219,7 @@ class CartItem(models.Model):
 class CartItemCharm(models.Model):
     item = models.ForeignKey(CartItem, on_delete=models.CASCADE)
     charm = models.ForeignKey(Charm, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         item = self.item
@@ -226,7 +227,7 @@ class CartItemCharm(models.Model):
             item.gift_set.name if item and item.gift_set else "Unknown Item"
         )
         user_email = item.cart.user.email if item and item.cart and item.cart.user else "Unknown User"
-        return f"{self.charm.name} - {product_name} in {user_email}'s cart"
+        return f"{self.charm.name}x{self.quantity} - {product_name} in {user_email}'s cart"
 
 class VideoContent(models.Model):
     title = models.CharField(max_length=255)
