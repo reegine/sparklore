@@ -210,18 +210,19 @@ class CartItemCharmSerializer(serializers.ModelSerializer):
     class Meta: model = CartItemCharm; fields = ['charm_id']
 
 class CartItemSerializer(serializers.ModelSerializer):
+    quantity = serializers.IntegerField(required=False, default=1)
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), required=False)
     gift_set = serializers.PrimaryKeyRelatedField(queryset=GiftSetOrBundleMonthlySpecial.objects.all(), required=False)
+
     charms = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        write_only=True 
+        child=serializers.IntegerField(), required=False, write_only=True
     )
-    charms = serializers.SerializerMethodField(read_only=True)
+    charms_display = serializers.SerializerMethodField(read_only=True)
     source_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = CartItem; fields =  ['id', 'product', 'gift_set', 'quantity', 'charms', 'source_type']
+        model = CartItem
+        fields = ['id', 'product', 'gift_set', 'quantity', 'charms', 'charms_display', 'source_type']
 
     def get_source_type(self, obj):
         if obj.product:
@@ -230,37 +231,26 @@ class CartItemSerializer(serializers.ModelSerializer):
             return 'gift_set'
         return 'charms_only'
 
-    def validate(self, data):
-        product = data.get('product') if 'product' in data else getattr(self.instance, 'product', None)
-        gift_set = data.get('gift_set') if 'gift_set' in data else getattr(self.instance, 'gift_set', None)
-
-        if 'charms' in data:
-            charms = data['charms']
-        elif self.instance:
-            charms = list(self.instance.charms.all())
-        else:
-            charms = []
-
-        if len(charms) > 5:
-            raise serializers.ValidationError('Max 5 charms per item.')
-
-        if gift_set and (product or charms):
-            raise serializers.ValidationError('Gift set tidak boleh dikombinasikan dengan produk atau charms.')
-
-        if not product and not gift_set and not charms:
-            raise serializers.ValidationError('Harus memilih minimal satu dari: product, gift set, atau charms.')
-
-        if product:
-            if product.category not in ['necklace', 'bracelet'] and charms:
-                raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
-        return data
-
-    def get_charms(self, obj):
+    def get_charms_display(self, obj):
         charm_items = CartItemCharm.objects.filter(item=obj)
         result = []
         for charm_item in charm_items:
             result.extend([charm_item.charm.id] * charm_item.quantity)
         return result
+
+    def validate(self, data):
+        product = data.get('product') if 'product' in data else getattr(self.instance, 'product', None)
+        gift_set = data.get('gift_set') if 'gift_set' in data else getattr(self.instance, 'gift_set', None)
+        charms = data.get('charms', [])
+
+        if gift_set and (product or charms):
+            raise serializers.ValidationError('Gift set tidak boleh dikombinasikan dengan produk atau charms.')
+        if len(charms) > 5:
+            raise serializers.ValidationError('Max 5 charms per item.')
+        if product and charms:
+            if product.category not in ['necklace', 'bracelet']:
+                raise serializers.ValidationError('Charms hanya bisa ditambahkan ke produk kategori necklace atau bracelet.')
+        return data
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True)

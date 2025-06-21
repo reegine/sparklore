@@ -6,9 +6,9 @@ class RajaOngkirService:
     BASE_URL = "https://rajaongkir.komerce.id/api/v1"
 
     HEADERS = {
-        "accept": "application/json",
-        "key": API_KEY,
-        "content-type": "application/json"
+        "Accept": "application/json",
+        "Key": API_KEY,
+        "Content-Type": "application/json"
     }
 
     @classmethod
@@ -16,6 +16,7 @@ class RajaOngkirService:
         url = f"{cls.BASE_URL}/destination/domestic-destination"
         params = {"search": keyword, "limit": 1}
         response = requests.get(url, headers={"accept": "application/json", "key": cls.API_KEY}, params=params)
+        print(">>> search_destination response:", response.json())  # tambahkan ini
         response.raise_for_status()
         data = response.json()
         if data and data.get("data"):
@@ -24,21 +25,31 @@ class RajaOngkirService:
             raise ValueError("Lokasi tidak ditemukan")
 
     @classmethod
-    def calculate_shipping_cost(cls, origin_keyword, destination_keyword, weight, courier="jne:sicepat:jnt", price="lowest"):
-        origin_id = cls.search_destination(origin_keyword)
+    def calculate_shipping_cost(cls, destination_keyword, weight, courier="jne:sicepat:jnt", price="lowest"):
+        ORIGIN_ID = "6560"  # Jatibening
         destination_id = cls.search_destination(destination_keyword)
 
         payload = {
-            "origin": origin_id,
-            "destination": destination_id,
+            "origin": str(ORIGIN_ID),
+            "destination": str(destination_id),
             "weight": int(weight),
             "courier": courier,
             "price": price
         }
 
+        print(">>> Payload dikirim:", payload)
+
         url = f"{cls.BASE_URL}/calculate/domestic-cost"
         response = requests.post(url, headers=cls.HEADERS, json=payload)
-        response.raise_for_status()
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            print(">>> ERROR RajaOngkir:", e)
+            print(">>> Response status code:", response.status_code)
+            print(">>> Response body:", response.text)  # <-- Tambahkan ini!
+            raise e
+
         return response.json()
 
     @classmethod

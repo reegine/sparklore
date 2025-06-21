@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
 from .models import CartItemCharm, Charm, DiscountCampaign, GiftSetOrBundleMonthlySpecial, NewsletterSubscriber, OrderItem, OrderItemCharm, PhotoGallery, Review, Product, Cart, CartItem, Order, VideoContent, PageBanner #Payment
 from .serializers import (
     CharmSerializer, DiscountCampaignSerializer, GiftSetOrBundleMonthlySpecialProductSerializer, ProductSerializer,
@@ -51,36 +52,43 @@ class CartViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
     def add(self, request):
         cart, _ = Cart.objects.get_or_create(user=request.user)
-        charms_input = request.data.pop('charms', [])
-        serializer = CartItemSerializer(data=request.data)
+
+        charms = request.data.get('charms', [])
+        request_data = request.data.copy()
+        request_data['charms'] = charms  # tetap charms, bukan charms_input
+
+        serializer = CartItemSerializer(data=request_data)
         serializer.is_valid(raise_exception=True)
         item = serializer.save(cart=cart)
 
-        if charms_input:
-            if len(charms_input) > 5:
+        if charms:
+            if len(charms) > 5:
                 return Response({'error': 'Max 5 charms per item.'}, status=400)
-            
-            charm_counts = Counter(charms_input)  # Contoh: {1: 3, 3: 2}
+
             item.charms.clear()
+            charm_counts = Counter(charms)
             for charm_id, qty in charm_counts.items():
                 charm = get_object_or_404(Charm, pk=charm_id)
                 CartItemCharm.objects.create(item=item, charm=charm, quantity=qty)
-        return Response(CartSerializer(cart, context={'request': request}).data, status=status.HTTP_201_CREATED)        
+
+        return Response(CartSerializer(cart, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['patch'])
     def update_item(self, request, pk=None):
         item = get_object_or_404(CartItem, pk=pk, cart__user=request.user)
-        charms_input = request.data.pop('charms', None)
-        serializer = CartItemSerializer(item, data=request.data, partial=True)
+        charms = request.data.get('charms', None)
+        request_data = request.data.copy()
+
+        serializer = CartItemSerializer(item, data=request_data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        if charms_input is not None:
-            if len(charms_input) > 5:
+        if charms is not None:
+            if len(charms) > 5:
                 return Response({'error': 'Max 5 charms per item.'}, status=400)
-            
+
             item.charms.clear()
-            charm_counts = Counter(charms_input)
+            charm_counts = Counter(charms)
             for charm_id, qty in charm_counts.items():
                 charm = get_object_or_404(Charm, pk=charm_id)
                 CartItemCharm.objects.create(item=item, charm=charm, quantity=qty)
@@ -360,15 +368,20 @@ class DiscountCampaignViewSet(viewsets.ReadOnlyModelViewSet):
 
 @api_view(["GET"])
 def get_shipping_cost(request):
-    origin = "jatibening"
-    destination = request.query_params.get("destination")
-    weight = request.query_params.get("weight", 1000)  # default 1000 gram
+    destination = request.GET.get('destination')
+    weight = request.GET.get('weight', 1000)
+
+    if not destination or not weight:
+        return JsonResponse({"error": "Missing destination or weight"}, status=400)
 
     try:
-        result = RajaOngkirService.calculate_shipping_cost(origin, destination, weight)
-        return Response(result)
+        result = RajaOngkirService.calculate_shipping_cost(
+            destination_keyword=destination,
+            weight=weight
+        )
+        return JsonResponse(result)
     except Exception as e:
-        return Response({"error": str(e)}, status=400)
+        return JsonResponse({"error": str(e)}, status=400)
 
 @api_view(["GET"])
 def track_resi(request):
