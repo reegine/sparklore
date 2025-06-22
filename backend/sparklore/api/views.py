@@ -1,5 +1,5 @@
 from collections import Counter
-from .services import RajaOngkirService
+from .services import trackresi
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -13,11 +13,16 @@ from .serializers import (
     CartSerializer, CartItemSerializer,
     OrderSerializer, NewsletterSubscriberSerializer,
     ReviewSerializer, VideoContentSerializer,
-    PageBannerSerializer, PhotoGalerySerializer#PaymentSerializer
+    PageBannerSerializer, PhotoGalerySerializer
 )
-# from .services import MidtransService, RajaOngkirService
 from django.db import transaction
 from django.utils import timezone
+import midtransclient
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class CharmViewSet(viewsets.ModelViewSet):
     queryset = Charm.objects.all()
@@ -55,7 +60,7 @@ class CartViewSet(viewsets.ViewSet):
 
         charms = request.data.get('charms', [])
         request_data = request.data.copy()
-        request_data['charms'] = charms  # tetap charms, bukan charms_input
+        request_data['charms'] = charms 
 
         serializer = CartItemSerializer(data=request_data)
         serializer.is_valid(raise_exception=True)
@@ -104,74 +109,7 @@ class CartViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def selective_checkout(self, request):
-        cart_item_ids = request.data.get('cart_item_ids', [])
-        if not cart_item_ids:
-            return Response({'error': 'Pilih minimal satu item untuk checkout.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        cart = Cart.objects.prefetch_related('items__product', 'items__gift_set', 'items__charms').filter(user=request.user).first()
-        if not cart:
-            return Response({'error': 'Keranjang tidak ditemukan.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        selected_items = cart.items.filter(id__in=cart_item_ids)
-        if not selected_items.exists():
-            return Response({'error': 'Item yang dipilih tidak ditemukan di keranjang.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        with transaction.atomic():
-            total_price = 0
-            order = Order.objects.create(
-                user=request.user,
-                payment_status='pending',
-                fulfillment_status='pending',
-                shipping_address=request.data.get('shipping_address', '-'),
-                shipping_cost=request.data.get('shipping_cost', 0),
-                total_price=0,
-            )
-            
-            for item in selected_items:
-                if not item.product and not item.gift_set:
-                    return Response({'error': 'Item harus berisi produk atau gift set'}, status=400)
-                if item.product and item.gift_set:
-                    return Response({'error': 'Item tidak boleh memiliki dua sumber produk sekaligus'}, status=400)
-                
-                if item.product:
-                    if item.quantity > item.product.stock:
-                        return Response({'error': f"Stok tidak cukup untuk produk {item.product.name}"}, status=400)
-                    item_total = item.product.price * item.quantity
-                else:
-                    item_total = item.gift_set.price * item.quantity
-                
-                charm_total = sum([charm.price for charm in item.charms.all()]) * item.quantity
-                total_price += item_total + charm_total
-                
-                order_item = OrderItem.objects.create(
-                    order=order,
-                    product=item.product,
-                    gift_set=item.gift_set,
-                    quantity=item.quantity
-                )
-                
-                OrderItemCharm.objects.bulk_create([
-                    OrderItemCharm(order_item=order_item, charm=charm_relation.charm)
-                    for charm_relation in CartItemCharm.objects.filter(item=item)
-                    for _ in range(charm_relation.quantity)
-                ])
-                
-                if item.product:
-                    item.product.stock -= item.quantity
-                    item.product.sold_stok += item.quantity
-                    item.product.save()
-            
-            order.total_price = total_price + order.shipping_cost
-            order.save()
-            
-            selected_items.delete()
-        
-        return Response({
-            'message': 'Checkout berhasil',
-            'order_id': order.id,
-            'total_price': order.total_price,
-            'checked_out_items': len(selected_items)
-        }, status=status.HTTP_201_CREATED)
+        pass
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
@@ -185,137 +123,6 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
     queryset = NewsletterSubscriber.objects.all()
     serializer_class = NewsletterSubscriberSerializer
     permission_classes = [AllowAny]
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def checkout(request):
-    cart = Cart.objects.prefetch_related('items__product', 'items__gift_set', 'items__charms').filter(user=request.user).first()
-    if not cart or not cart.items.exists():
-        return Response({'error': 'Keranjang kosong.'}, status=status.HTTP_400_BAD_REQUEST)
-
-    with transaction.atomic():
-        total_price = 0
-        order = Order.objects.create(
-            user=request.user,
-            payment_status='pending',
-            fulfillment_status='pending',
-            shipping_address=request.data.get('shipping_address', '-'),
-            shipping_cost=request.data.get('shipping_cost', 0),
-            total_price=0,
-        )
-
-        for item in cart.items.all():
-            if not item.product and not item.gift_set:
-                return Response({'error': 'Item harus berisi produk atau gift set'}, status=400)
-            if item.product and item.gift_set:
-                return Response({'error': 'Item tidak boleh memiliki dua sumber produk sekaligus'}, status=400)
-
-            if item.product:
-                if item.quantity > item.product.stock:
-                    return Response({'error': f"Stok tidak cukup untuk produk {item.product.name}"}, status=400)
-                item_total = item.product.price * item.quantity
-            else:
-                item_total = item.gift_set.price * item.quantity
-
-            charm_total = sum([charm.price for charm in item.charms.all()]) * item.quantity
-            total_price += item_total + charm_total
-
-            order_item = OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                gift_set=item.gift_set,
-                quantity=item.quantity
-            )
-
-            for charm in item.charms.all():
-                OrderItemCharm.objects.create(order_item=order_item, charm=charm)
-
-            if item.product:
-                item.product.stock -= item.quantity
-                item.product.sold_stok += item.quantity
-                item.product.save()
-
-        order.total_price = total_price + order.shipping_cost
-        order.save()
-
-        cart.items.all().delete()
-
-    return Response({
-        'message': 'Checkout berhasil',
-        'order_id': order.id,
-        'total_price': order.total_price
-    }, status=status.HTTP_201_CREATED)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def direct_checkout(request):
-    item_type = request.data.get('type')
-    item_id = request.data.get('item_id')
-    charms_ids = request.data.get('charms', [])
-    quantity = int(request.data.get('quantity', 1))
-    shipping_address = request.data.get('shipping_address', '-')
-    shipping_cost = float(request.data.get('shipping_cost', 0))
-
-    if item_type not in ['product', 'gift_set', 'charm']:
-        return Response({'error': 'Invalid type. Use product, charm, or gift_set.'}, status=400)
-
-    with transaction.atomic():
-        total_price = 0
-        order = Order.objects.create(
-            user=request.user,
-            payment_status='pending',
-            fulfillment_status='pending',
-            shipping_address=shipping_address,
-            shipping_cost=shipping_cost,
-            total_price=0
-        )
-
-        product = None
-        gift_set = None
-
-        if item_type == 'product':
-            product = get_object_or_404(Product, id=item_id)
-            if quantity > product.stock:
-                return Response({'error': 'Stok produk tidak mencukupi'}, status=400)
-            item_total = product.price * quantity
-            product.stock -= quantity
-            product.sold_stok += quantity
-            product.save()
-        elif item_type == 'gift_set':
-            gift_set = get_object_or_404(GiftSetOrBundleMonthlySpecial, id=item_id)
-            item_total = gift_set.price * quantity
-        elif item_type == 'charm':
-            charm = get_object_or_404(Charm, id=item_id)
-            item_total = charm.price * quantity
-
-        charm_total = 0
-        charm_objs = []
-        if charms_ids:
-            charm_objs = Charm.objects.filter(id__in=charms_ids)
-            if len(charm_objs) > 5:
-                return Response({'error': 'Maksimal 5 charms'}, status=400)
-            if product and not product.charms:
-                return Response({'error': 'Produk ini tidak mendukung charms'}, status=400)
-            charm_total = sum([charm.price for charm in charm_objs]) * quantity
-
-        order_item = OrderItem.objects.create(
-            order=order,
-            product=product,
-            gift_set=gift_set,
-            quantity=quantity
-        )
-
-        for charm in charm_objs:
-            OrderItemCharm.objects.create(order_item=order_item, charm=charm)
-
-        order.total_price = item_total + charm_total + shipping_cost
-        order.save()
-
-    return Response({
-        'message': 'Direct checkout berhasil',
-        'order_id': order.id,
-        'total_price': order.total_price
-    }, status=status.HTTP_201_CREATED)
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -366,33 +173,79 @@ class DiscountCampaignViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return DiscountCampaign.objects.all()
 
-@api_view(["GET"])
-def get_shipping_cost(request):
-    destination = request.GET.get('destination')
-    weight = request.GET.get('weight', 1000)
+class MidtransSnapTokenView(APIView):
+    def post(self, request):
+        midtrans_server_key = os.getenv("MIDTRANS_SERVER_KEY")
+        midtrans_is_production = os.getenv("MIDTRANS_IS_PRODUCTION", "False").lower()
+        try:
+            data = request.data
+            order_id = data.get('order_id')
+            gross_amount = data.get('gross_amount')
+            email = data.get('email')
+            first_name = data.get('first_name')
+            last_name = data.get('last_name')
+            phone = data.get('phone')
+            address = data.get('address')
+            city = data.get('city')
+            postal_code = data.get('postal_code')
+            country = data.get('country')
+            notes = data.get('notes')
+            item_details = data.get('item_details') 
 
-    if not destination or not weight:
-        return JsonResponse({"error": "Missing destination or weight"}, status=400)
+            snap = midtransclient.Snap(
+                is_production=midtrans_is_production,
+                server_key=midtrans_server_key
+            )
 
-    try:
-        result = RajaOngkirService.calculate_shipping_cost(
-            destination_keyword=destination,
-            weight=weight
-        )
-        return JsonResponse(result)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+            param = {
+                "transaction_details": {
+                    "order_id": order_id,
+                    "gross_amount": gross_amount
+                },
+                "item_details": item_details,
+                "customer_details": {
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "email": email,
+                    "phone": phone,
+                    "billing_address": {
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": email,
+                        "phone": phone,
+                        "address": address,
+                        "city": city,
+                        "postal_code": postal_code,
+                        "country_code": country
+                    },
+                    "shipping_address": {
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": email,
+                        "phone": phone,
+                        "address": address,
+                        "city": city,
+                        "postal_code": postal_code,
+                        "country_code": country
+                    }
+                },
+                "Notes": notes
+            }
 
-@api_view(["GET"])
-def track_resi(request):
-    awb = request.query_params.get("awb")
-    courier = request.query_params.get("courier")
+            transaction = snap.create_transaction(param)
+            return Response({
+                'token': transaction['token'],
+                'redirect_url': transaction['redirect_url']
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not awb or not courier:
-        return Response({"error": "awb and courier are required"}, status=400)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def checkout(request):
+    pass
 
-    try:
-        result = RajaOngkirService.track_waybill(awb, courier)
-        return Response(result)
-    except Exception as e:
-        return Response({"error": str(e)}, status=400)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def direct_checkout(request):
+    pass

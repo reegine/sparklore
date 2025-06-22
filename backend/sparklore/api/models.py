@@ -74,6 +74,7 @@ class Product(models.Model):
     sold_stok = models.IntegerField(default=0)
     discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     charms = models.BooleanField(default=False, help_text="Apakah produk ini memiliki charms?")
+    is_charm_spreadable = models.BooleanField(default=False, help_text="Apakah produk ini charmsnya bisa disebarkan?")
 
     # Produk di dalam jewel set
     jewel_set_products = models.ManyToManyField('self', blank=True, symmetrical=False)
